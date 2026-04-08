@@ -8,86 +8,18 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Separator } from "@/components/ui/separator"
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { useCart } from "@/lib/store/cart"
 import { shippingAddressSchema, type ShippingAddressInput } from "@/lib/validations"
 import { toast } from "sonner"
 import { createClient } from "@/lib/supabase/client"
-import { Loader2, ArrowLeft, CreditCard, Wallet, Building2, Store, Smartphone } from "lucide-react"
+import { Loader2, ArrowLeft, CreditCard } from "lucide-react"
 import Link from "next/link"
 
-const PAYMENT_METHODS = [
-  {
-    id: "qris",
-    label: "QRIS",
-    description: "Scan QR code untuk pembayaran instan",
-    icon: Smartphone,
-    midtransKey: "qris",
-  },
-  {
-    id: "bca",
-    label: "Bank BCA",
-    description: "Transfer virtual account BCA",
-    icon: Building2,
-    midtransKey: "bca",
-  },
-  {
-    id: "bri",
-    label: "Bank BRI",
-    description: "Transfer virtual account BRI",
-    icon: Building2,
-    midtransKey: "bri",
-  },
-  {
-    id: "bni",
-    label: "Bank BNI",
-    description: "Transfer virtual account BNI",
-    icon: Building2,
-    midtransKey: "bni",
-  },
-  {
-    id: "mandiri",
-    label: "Bank Mandiri",
-    description: "Transfer virtual account Mandiri",
-    icon: Building2,
-    midtransKey: "mandiri",
-  },
-  {
-    id: "gopay",
-    label: "GoPay",
-    description: "Bayar dengan saldo GoPay",
-    icon: Wallet,
-    midtransKey: "gopay",
-  },
-  {
-    id: "shopeepay",
-    label: "ShopeePay",
-    description: "Bayar dengan saldo ShopeePay",
-    icon: Wallet,
-    midtransKey: "shopeepay",
-  },
-  {
-    id: "indomaret",
-    label: "Indomaret",
-    description: "Bayar di gerai Indomaret",
-    icon: Store,
-    midtransKey: "indomaret",
-  },
-  {
-    id: "alfamart",
-    label: "Alfamart",
-    description: "Bayar di gerai Alfamart",
-    icon: Store,
-    midtransKey: "alfamart",
-  },
-  {
-    id: "credit_card",
-    label: "Kartu Kredit/Debit",
-    description: "Visa, Mastercard, JCB",
-    icon: CreditCard,
-    midtransKey: "credit_card",
-  },
-]
+declare global {
+  interface Window {
+    snap: any
+  }
+}
 
 export default function CheckoutPage() {
   const router = useRouter()
@@ -96,6 +28,7 @@ export default function CheckoutPage() {
   const clearCart = useCart((state) => state.clearCart)
 
   const [isLoading, setIsLoading] = useState(false)
+  const [isHydrated, setIsHydrated] = useState(false)
   const [formData, setFormData] = useState({
     recipient_name: "",
     recipient_phone: "",
@@ -107,14 +40,43 @@ export default function CheckoutPage() {
     notes: "",
   })
   const [errors, setErrors] = useState<Record<string, string>>({})
-  const [selectedPayment, setSelectedPayment] = useState<string>("qris")
 
   // Redirect if cart is empty
   useEffect(() => {
+    setIsHydrated(true)
     if (items.length === 0) {
       router.push("/cart")
     }
   }, [items.length, router])
+
+  // Load Midtrans Snap script on mount (same pattern as reference repo)
+  useEffect(() => {
+    if (!isHydrated) return
+
+    const isProduction = process.env.NEXT_PUBLIC_MIDTRANS_IS_PRODUCTION === "true"
+    const snapScript = isProduction
+      ? "https://app.midtrans.com/snap/snap.js"
+      : "https://app.sandbox.midtrans.com/snap/snap.js"
+
+    const clientKey = process.env.NEXT_PUBLIC_MIDTRANS_CLIENT_KEY
+
+    // Remove existing script if any
+    const existingScript = document.querySelector(`script[src="${snapScript}"]`)
+    if (existingScript) {
+      existingScript.remove()
+    }
+
+    const script = document.createElement("script")
+    script.src = snapScript
+    script.setAttribute("data-client-key", clientKey || "")
+    script.async = true
+
+    document.body.appendChild(script)
+
+    return () => {
+      script.remove()
+    }
+  }, [isHydrated])
 
   const total = getTotal()
   const shippingCost = 15000
@@ -171,11 +133,6 @@ export default function CheckoutPage() {
 
     if (!validateForm()) {
       toast.error("Please fix the errors in the form")
-      return
-    }
-
-    if (!selectedPayment) {
-      toast.error("Please select a payment method")
       return
     }
 
@@ -264,7 +221,6 @@ export default function CheckoutPage() {
         throw new Error(paymentError.message)
       }
 
-      // Call API to get Midtrans token
       const response = await fetch("/api/payment/create-transaction", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -276,7 +232,6 @@ export default function CheckoutPage() {
             email: session.user.email,
             phone: formData.recipient_phone,
           },
-          paymentMethod: selectedPayment,
         }),
       })
 
@@ -286,16 +241,48 @@ export default function CheckoutPage() {
 
       const { token } = await response.json()
 
-      // Clear cart
-      clearCart()
-
-      // Redirect to payment
-      router.push(`/payment/${order.id}?token=${token}`)
+      // Open Midtrans Snap popup immediately (same pattern as reference repo)
+      if (typeof window !== "undefined" && window.snap) {
+        window.snap.pay(token, {
+          onSuccess: function (result: any) {
+            console.log("Payment success:", result)
+            clearCart()
+            router.push(`/payment/success?orderId=${order.id}`)
+          },
+          onPending: function (result: any) {
+            console.log("Payment pending:", result)
+            clearCart()
+            router.push(`/payment/pending?orderId=${order.id}`)
+          },
+          onError: function (result: any) {
+            console.log("Payment error:", result)
+            toast.error("Payment failed. Please try again.")
+          },
+          onClose: function () {
+            console.log("User closed payment popup")
+            // User closed popup without completing payment - redirect to orders
+            router.push(`/orders/${order.id}`)
+          },
+        })
+      } else {
+        // Snap not loaded - redirect to payment page
+        clearCart()
+        router.push(`/payment/${order.id}?token=${token}`)
+      }
     } catch (error: any) {
       toast.error(error.message || "Failed to create order")
     } finally {
       setIsLoading(false)
     }
+  }
+
+  // Show loading skeleton until hydrated (prevent hydration mismatch from zustand store)
+  if (!isHydrated) {
+    return (
+      <div className="container mx-auto px-4 py-16 flex items-center justify-center min-h-[80vh]">
+        <Loader2 className="size-8 animate-spin text-primary" />
+      </div>
+    )
   }
 
   return (
@@ -483,46 +470,6 @@ export default function CheckoutPage() {
                     <span>Total</span>
                     <span>{formatPrice(grandTotal)}</span>
                   </div>
-                </div>
-
-                {/* Payment Method Selection */}
-                <div className="space-y-3">
-                  <Label className="text-base font-semibold">Payment Method</Label>
-                  <RadioGroup
-                    value={selectedPayment}
-                    onValueChange={setSelectedPayment}
-                    className="grid grid-cols-1 gap-2 max-h-64 overflow-y-auto"
-                  >
-                    {PAYMENT_METHODS.map((method) => {
-                      const Icon = method.icon
-                      return (
-                        <div
-                          key={method.id}
-                          className={`flex items-start gap-3 rounded-lg border-2 p-3 cursor-pointer transition-all ${
-                            selectedPayment === method.id
-                              ? "border-primary bg-primary/5"
-                              : "border-border hover:border-muted-foreground/50"
-                          }`}
-                          onClick={() => setSelectedPayment(method.id)}
-                        >
-                          <RadioGroupItem
-                            value={method.id}
-                            id={method.id}
-                            className="mt-0.5"
-                          />
-                          <div className="flex items-center gap-3 flex-1">
-                            <Icon className="size-5 text-muted-foreground shrink-0" />
-                            <div className="flex-1">
-                              <p className="font-medium text-sm">{method.label}</p>
-                              <p className="text-xs text-muted-foreground">
-                                {method.description}
-                              </p>
-                            </div>
-                          </div>
-                        </div>
-                      )
-                    })}
-                  </RadioGroup>
                 </div>
 
                 <Button

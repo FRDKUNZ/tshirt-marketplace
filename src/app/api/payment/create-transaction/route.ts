@@ -1,24 +1,10 @@
 import { NextRequest, NextResponse } from "next/server"
-import midtransClient from "midtrans-client"
-
-// Map payment method ID to Midtrans payment type
-const PAYMENT_TYPE_MAP: Record<string, string> = {
-  qris: "qris",
-  bca: "bank_transfer",
-  bri: "bank_transfer",
-  bni: "bank_transfer",
-  mandiri: "bank_transfer",
-  gopay: "gopay",
-  shopeepay: "shopeepay",
-  indomaret: "cstore",
-  alfamart: "cstore",
-  credit_card: "credit_card",
-}
+import Midtrans from "midtrans-client"
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { orderId, amount, customerDetails, paymentMethod } = body
+    const { orderId, amount, customerDetails } = body
 
     // Validate required fields
     if (!orderId || !amount || !customerDetails) {
@@ -28,7 +14,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Initialize Snap API
+    // Initialize Midtrans Snap (same pattern as reference repo)
     const serverKey = process.env.MIDTRANS_SERVER_KEY
     const clientKey = process.env.NEXT_PUBLIC_MIDTRANS_CLIENT_KEY
 
@@ -39,16 +25,14 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const snap = new midtransClient.Snap({
+    const snap = new Midtrans.Snap({
       isProduction: process.env.MIDTRANS_IS_PRODUCTION === "true",
       serverKey,
       clientKey,
     })
 
-    // Build payment type config
-    const paymentType = PAYMENT_TYPE_MAP[paymentMethod] || "credit_card"
-
-    // Build transaction payload with specific payment method
+    // Build transaction payload (same pattern as reference repo)
+    // Do NOT use enabled_payments - let Snap show all available payment channels
     const transactionPayload: any = {
       transaction_details: {
         order_id: orderId,
@@ -61,25 +45,10 @@ export async function POST(request: NextRequest) {
       },
     }
 
-    // Add payment method specific config
-    if (paymentType === "bank_transfer") {
-      transactionPayload.enabled_payments = [paymentMethod.toUpperCase()]
-      transactionPayload.payment_type = "bank_transfer"
-    } else if (paymentType === "cstore") {
-      transactionPayload.enabled_payments = [paymentMethod]
-      transactionPayload.payment_type = "cstore"
-    } else {
-      transactionPayload.enabled_payments = [paymentMethod]
-      transactionPayload.payment_type = paymentType
-    }
-
-    // Create transaction
+    // Create transaction and return token
     const transaction = await snap.createTransaction(transactionPayload)
 
-    return NextResponse.json({
-      token: transaction.token,
-      redirectUrl: transaction.redirect_url,
-    })
+    return NextResponse.json({ token: transaction.token })
   } catch (error: any) {
     console.error("Midtrans transaction error:", error)
     return NextResponse.json(

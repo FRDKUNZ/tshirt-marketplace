@@ -21,26 +21,43 @@ export default function PaymentPage({
   const router = useRouter()
   const searchParams = useSearchParams()
   const token = searchParams.get("token")
-  
+
   const [isLoading, setIsLoading] = useState(true)
   const [paymentStatus, setPaymentStatus] = useState<"pending" | "success" | "failed">("pending")
   const [orderId, setOrderId] = useState<string>("")
 
   useEffect(() => {
-    const loadMidtrans = async () => {
-      // Load Midtrans Snap script only on client
-      if (typeof window === 'undefined') return
-      
-      const script = document.createElement("script")
+    const initPayment = async () => {
+      const { id } = await params
+      setOrderId(id)
+
+      if (!token) {
+        setPaymentStatus("failed")
+        setIsLoading(false)
+        return
+      }
+
+      // Load Midtrans Snap script (same pattern as reference repo)
       const isProduction = process.env.NEXT_PUBLIC_MIDTRANS_IS_PRODUCTION === "true"
-      script.src = isProduction
+      const snapScript = isProduction
         ? "https://app.midtrans.com/snap/snap.js"
         : "https://app.sandbox.midtrans.com/snap/snap.js"
-      script.setAttribute("data-client-key", process.env.NEXT_PUBLIC_MIDTRANS_CLIENT_KEY || "")
+
+      const clientKey = process.env.NEXT_PUBLIC_MIDTRANS_CLIENT_KEY
+
+      // Remove existing script if any
+      const existingScript = document.querySelector(`script[src="${snapScript}"]`)
+      if (existingScript) {
+        existingScript.remove()
+      }
+
+      const script = document.createElement("script")
+      script.src = snapScript
+      script.setAttribute("data-client-key", clientKey || "")
       script.async = true
-      
+
       script.onload = () => {
-        if (token && typeof window !== 'undefined' && window.snap) {
+        if (window.snap) {
           window.snap.pay(token, {
             onSuccess: function (result: any) {
               setPaymentStatus("success")
@@ -55,39 +72,25 @@ export default function PaymentPage({
               console.log("Payment error:", result)
             },
             onClose: function () {
-              // User closed the popup
               if (paymentStatus === "pending") {
-                router.push(`/orders/${orderId}`)
+                router.push(`/orders/${id}`)
               }
             },
           })
         }
       }
-      
+
       script.onerror = () => {
         setIsLoading(false)
         setPaymentStatus("failed")
       }
 
-      document.head.appendChild(script)
-    }
-
-    const initPayment = async () => {
-      const { id } = await params
-      setOrderId(id)
-
-      if (!token) {
-        setPaymentStatus("failed")
-        setIsLoading(false)
-        return
-      }
-
-      await loadMidtrans()
+      document.body.appendChild(script)
       setIsLoading(false)
     }
 
     initPayment()
-  }, [token, params, router])
+  }, [token, params, router, paymentStatus])
 
   return (
     <div className="container mx-auto px-4 py-16 flex items-center justify-center min-h-[80vh]">

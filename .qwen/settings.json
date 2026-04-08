@@ -6,7 +6,10 @@
       "Bash(rd *)",
       "Bash(taskkill *)",
       "Bash(findstr *)",
-      "Bash(mkdir *)"
+      "Bash(mkdir *)",
+      "Bash(git clone *)",
+      "Bash(xcopy *)",
+      "Bash(rmdir *)"
     ]
   },
   "$version": 3
