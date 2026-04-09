@@ -10,7 +10,9 @@
       "Bash(git clone *)",
       "Bash(xcopy *)",
       "Bash(rmdir *)",
-      "Bash(type *)"
+      "Bash(type *)",
+      "Bash(convertfrom-json)",
+      "Bash(select-object *)"
     ]
   },
   "$version": 3

@@ -1,3 +1,5 @@
+"use client"
+
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
@@ -14,100 +16,8 @@ import {
   ShoppingBag,
 } from "lucide-react"
 import Image from "next/image"
-
-const features = [
-  {
-    icon: Palette,
-    title: "Full Customization",
-    description: "Upload your designs, choose colors, and position them perfectly on front and back.",
-  },
-  {
-    icon: Upload,
-    title: "Easy Upload",
-    description: "Support for PNG and JPG files. Drag, resize, and rotate your images with ease.",
-  },
-  {
-    icon: ShoppingBag,
-    title: "Simple Ordering",
-    description: "Add to cart, checkout, and pay securely with multiple payment options.",
-  },
-  {
-    icon: Truck,
-    title: "Fast Delivery",
-    description: "Printed and shipped within 3-5 business days straight to your doorstep.",
-  },
-  {
-    icon: Shield,
-    title: "Quality Guaranteed",
-    description: "Premium quality printing with vibrant colors that last wash after wash.",
-  },
-  {
-    icon: Sparkles,
-    title: "Real-time Preview",
-    description: "See exactly how your t-shirt will look before you place your order.",
-  },
-]
-
-const testimonials = [
-  {
-    name: "Sarah Chen",
-    role: "Small Business Owner",
-    content: "Azure Store made it so easy to create custom merch for my team. The design tool is intuitive and the quality is outstanding!",
-    rating: 5,
-  },
-  {
-    name: "Marcus Johnson",
-    role: "Event Organizer",
-    content: "Ordered 100 custom tees for our festival. The process was smooth, delivery was on time, and everyone loved their shirts.",
-    rating: 5,
-  },
-  {
-    name: "Emily Rodriguez",
-    role: "Freelance Designer",
-    content: "As a designer, I appreciate the canvas tool. It lets me position my artwork exactly how I want it. Highly recommend!",
-    rating: 5,
-  },
-]
-
-const pricing = [
-  {
-    name: "SATUAN",
-    price: 89000,
-    description: "Untuk personal, hadiah, atau trial desain",
-    features: [
-      "Bebas desain custom (full color)",
-      "Kaos Combed 30s (lembut & adem)",
-      "Pilihan warna kaos: 10+ warna",
-      "Ukuran: S – XXL",
-      "Pengerjaan 2–3 hari kerja",
-    ],
-  },
-  {
-    name: "BER-5",
-    price: 79000,
-    description: "Untuk rombongan kecil, pasangan, tim mini",
-    features: [
-      "Semua fitur Paket Satuan",
-      "Hemat Rp 10.000 per kaos",
-      "Desain bisa beda tiap kaos",
-      "Gratis 2x revisi desain",
-      "Free sticker logo custom",
-    ],
-    popular: true,
-  },
-  {
-    name: "KOMUNITAS",
-    price: 65000,
-    description: "Untuk event, brand clothing, organisasi",
-    features: [
-      "Semua fitur Paket Ber-5",
-      "Hemat Rp 24.000 per kaos",
-      "Konsultasi desain GRATIS",
-      "Free sampling sebelum produksi",
-      "Garansi kaos cacat diganti baru",
-    ],
-  },
-]
+import { useLocale } from "@/lib/i18n/locale"
+import { t } from "@/lib/i18n/translations"
 
 function formatPrice(price: number) {
   return new Intl.NumberFormat("id-ID", {
@@ -118,6 +28,112 @@ function formatPrice(price: number) {
 }
 
 export default function HomePage() {
+  const { locale } = useLocale()
+
+  const features = [
+    {
+      icon: Palette,
+      title: t("home.features.f1.title", locale),
+      description: t("home.features.f1.desc", locale),
+    },
+    {
+      icon: Upload,
+      title: t("home.features.f2.title", locale),
+      description: t("home.features.f2.desc", locale),
+    },
+    {
+      icon: ShoppingBag,
+      title: t("home.features.f3.title", locale),
+      description: t("home.features.f3.desc", locale),
+    },
+    {
+      icon: Truck,
+      title: t("home.features.f4.title", locale),
+      description: t("home.features.f4.desc", locale),
+    },
+    {
+      icon: Shield,
+      title: t("home.features.f5.title", locale),
+      description: t("home.features.f5.desc", locale),
+    },
+    {
+      icon: Sparkles,
+      title: t("home.features.f6.title", locale),
+      description: t("home.features.f6.desc", locale),
+    },
+  ]
+
+  const testimonials = [
+    {
+      name: "Sarah Chen",
+      role: "Small Business Owner",
+      content: "Azure Store made it so easy to create custom merch for my team. The design tool is intuitive and the quality is outstanding!",
+      rating: 5,
+    },
+    {
+      name: "Marcus Johnson",
+      role: "Event Organizer",
+      content: "Ordered 100 custom tees for our festival. The process was smooth, delivery was on time, and everyone loved their shirts.",
+      rating: 5,
+    },
+    {
+      name: "Emily Rodriguez",
+      role: "Freelance Designer",
+      content: "As a designer, I appreciate the canvas tool. It lets me position my artwork exactly how I want it. Highly recommend!",
+      rating: 5,
+    },
+  ]
+
+  const pricing = [
+    {
+      name: "SATUAN",
+      price: 89000,
+      description: t("plan.satuan.tagline", locale),
+      features: [
+        t("plan.satuan.f1", locale),
+        t("plan.satuan.f2", locale),
+        t("plan.satuan.f3", locale),
+        t("plan.satuan.f4", locale),
+        t("plan.satuan.f5", locale),
+        t("plan.satuan.f6", locale),
+        t("plan.satuan.f7", locale),
+      ],
+    },
+    {
+      name: "BER-5",
+      price: 79000,
+      description: t("plan.bundle.tagline", locale),
+      features: [
+        t("plan.bundle.f1", locale),
+        t("plan.bundle.f2", locale),
+        t("plan.bundle.f3", locale),
+        t("plan.bundle.f4", locale),
+        t("plan.bundle.f5", locale),
+        t("plan.bundle.f6", locale),
+        t("plan.bundle.f7", locale),
+        t("plan.bundle.f8", locale),
+      ],
+      popular: true,
+    },
+    {
+      name: "KOMUNITAS",
+      price: 65000,
+      description: t("plan.komunitas.tagline", locale),
+      features: [
+        t("plan.komunitas.f1", locale),
+        t("plan.komunitas.f2", locale),
+        t("plan.komunitas.f3", locale),
+        t("plan.komunitas.f4", locale),
+        t("plan.komunitas.f5", locale),
+        t("plan.komunitas.f6", locale),
+        t("plan.komunitas.f7", locale),
+        t("plan.komunitas.f8", locale),
+        t("plan.komunitas.f9", locale),
+        t("plan.komunitas.f10", locale),
+      ],
+    },
+  ]
+
   return (
     <div className="flex flex-col gap-16 py-8 md:py-16">
       {/* Hero Section */}
@@ -125,29 +141,28 @@ export default function HomePage() {
         <div className="flex flex-col items-center text-center gap-8 max-w-4xl mx-auto">
           <Badge variant="secondary" className="gap-2">
             <Sparkles className="size-4" />
-            Design Your Own T-Shirt
+            {t("home.hero.badge", locale)}
           </Badge>
-          
+
           <h1 className="text-4xl md:text-6xl font-bold tracking-tight">
-            Create Custom T-Shirts{" "}
-            <span className="text-primary">Your Way</span>
+            {t("home.hero.title1", locale)}{" "}
+            <span className="text-primary">{t("home.hero.title2", locale)}</span>
           </h1>
-          
+
           <p className="text-lg md:text-xl text-muted-foreground max-w-2xl">
-            Upload your designs, choose your colors, and position them perfectly. 
-            Get premium quality custom t-shirts delivered to your door.
+            {t("home.hero.desc", locale)}
           </p>
-          
+
           <div className="flex flex-col sm:flex-row gap-4">
             <Link href="/customize">
               <Button size="lg" className="gap-2">
-                Start Customizing
+                {t("home.hero.start", locale)}
                 <ArrowRight className="size-4" />
               </Button>
             </Link>
             <Link href="#pricing">
               <Button size="lg" variant="outline">
-                View Pricing
+                {t("home.hero.pricing", locale)}
               </Button>
             </Link>
           </div>
@@ -167,8 +182,8 @@ export default function HomePage() {
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" />
                   <div className="absolute bottom-4 left-4 text-white">
-                    <p className="text-sm font-medium">Custom Design</p>
-                    <p className="text-xs opacity-80">Front & Back</p>
+                    <p className="text-sm font-medium">{t("home.concept.custom", locale)}</p>
+                    <p className="text-xs opacity-80">{t("home.concept.frontback", locale)}</p>
                   </div>
                 </div>
               </div>
@@ -237,12 +252,12 @@ export default function HomePage() {
       {/* Features Section */}
       <section id="features" className="container mx-auto px-4">
         <div className="text-center mb-12">
-          <Badge variant="secondary" className="mb-4">Features</Badge>
+          <Badge variant="secondary" className="mb-4">{t("home.features.badge", locale)}</Badge>
           <h2 className="text-3xl md:text-4xl font-bold mb-4">
-            Everything You Need to Create
+            {t("home.features.title", locale)}
           </h2>
           <p className="text-muted-foreground max-w-2xl mx-auto">
-            Powerful design tools combined with premium printing quality
+            {t("home.features.desc", locale)}
           </p>
         </div>
 
@@ -267,17 +282,17 @@ export default function HomePage() {
       {/* How It Works */}
       <section className="container mx-auto px-4">
         <div className="text-center mb-12">
-          <Badge variant="secondary" className="mb-4">How It Works</Badge>
+          <Badge variant="secondary" className="mb-4">{t("home.how.badge", locale)}</Badge>
           <h2 className="text-3xl md:text-4xl font-bold mb-4">
-            Three Simple Steps
+            {t("home.how.title", locale)}
           </h2>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-5xl mx-auto">
           {[
-            { step: "1", title: "Design", desc: "Upload your artwork and position it on the t-shirt" },
-            { step: "2", title: "Order", desc: "Choose your size, add to cart, and checkout" },
-            { step: "3", title: "Receive", desc: "Get your custom tee printed and delivered" },
+            { step: "1", title: t("home.how.s1.title", locale), desc: t("home.how.s1.desc", locale) },
+            { step: "2", title: t("home.how.s2.title", locale), desc: t("home.how.s2.desc", locale) },
+            { step: "3", title: t("home.how.s3.title", locale), desc: t("home.how.s3.desc", locale) },
           ].map((item) => (
             <div key={item.step} className="text-center space-y-4">
               <div className="size-16 rounded-full bg-primary text-primary-foreground text-2xl font-bold flex items-center justify-center mx-auto">
@@ -293,12 +308,12 @@ export default function HomePage() {
       {/* Pricing Section */}
       <section id="pricing" className="container mx-auto px-4">
         <div className="text-center mb-12">
-          <Badge variant="secondary" className="mb-4">Pricing</Badge>
+          <Badge variant="secondary" className="mb-4">{t("home.pricing.badge", locale)}</Badge>
           <h2 className="text-3xl md:text-4xl font-bold mb-4">
-            Harga Simple & Transparan
+            {t("home.pricing.title", locale)}
           </h2>
           <p className="text-muted-foreground max-w-2xl mx-auto">
-            Semakin banyak order, semakin hemat per kaos
+            {t("home.pricing.desc", locale)}
           </p>
         </div>
 
@@ -306,13 +321,12 @@ export default function HomePage() {
           {pricing.map((plan) => (
             <Card
               key={plan.name}
-              className={`relative ${
-                plan.popular ? "border-primary shadow-lg scale-105" : ""
-              }`}
+              className={`relative ${plan.popular ? "border-primary shadow-lg scale-105" : ""
+                }`}
             >
               {plan.popular && (
-                <Badge className="absolute -top-3 left-1/2 -translate-x-1/2">
-                  Paling Populer
+                <Badge className="absolute -top-0 left-1/2 -translate-x-1/2">
+                  {t("home.pricing.popular", locale)}
                 </Badge>
               )}
               <CardContent className="pt-6 space-y-6">
@@ -323,7 +337,7 @@ export default function HomePage() {
 
                 <div className="text-4xl font-bold">
                   {formatPrice(plan.price)}
-                  <span className="text-base font-normal text-muted-foreground">/kaos</span>
+                  <span className="text-base font-normal text-muted-foreground">{t("home.pricing.per", locale)}</span>
                 </div>
 
                 <ul className="space-y-3">
@@ -340,7 +354,7 @@ export default function HomePage() {
                     className="w-full"
                     variant={plan.popular ? "default" : "outline"}
                   >
-                    Pesan Sekarang
+                    {t("home.pricing.btn", locale)}
                   </Button>
                 </Link>
               </CardContent>
@@ -351,7 +365,7 @@ export default function HomePage() {
         <div className="text-center mt-8">
           <Link href="/pricing">
             <Button variant="link" className="gap-2">
-              Lihat detail harga lengkap →
+              {t("home.pricing.link", locale)}
             </Button>
           </Link>
         </div>
@@ -360,9 +374,9 @@ export default function HomePage() {
       {/* Testimonials */}
       <section className="container mx-auto px-4">
         <div className="text-center mb-12">
-          <Badge variant="secondary" className="mb-4">Testimonials</Badge>
+          <Badge variant="secondary" className="mb-4">{t("home.testimonials.badge", locale)}</Badge>
           <h2 className="text-3xl md:text-4xl font-bold mb-4">
-            Loved by Thousands
+            {t("home.testimonials.title", locale)}
           </h2>
         </div>
 
@@ -391,14 +405,14 @@ export default function HomePage() {
         <Card className="bg-gradient-to-r from-primary to-primary/80 text-primary-foreground">
           <CardContent className="py-16 text-center space-y-6">
             <h2 className="text-3xl md:text-4xl font-bold">
-              Ready to Create Your Custom Tee?
+              {t("home.cta.title", locale)}
             </h2>
             <p className="text-lg opacity-90 max-w-2xl mx-auto">
-              Start designing today and get your unique t-shirt delivered in just a few days.
+              {t("home.cta.desc", locale)}
             </p>
             <Link href="/customize">
               <Button size="lg" variant="secondary" className="gap-2">
-                Start Customizing Now
+                {t("home.cta.btn", locale)}
                 <ArrowRight className="size-4" />
               </Button>
             </Link>

@@ -11,6 +11,8 @@ import { Trash2, ShoppingCart, ArrowRight, Minus, Plus } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { Empty } from "@/components/ui/empty"
 import { formatRupiah, getUnitPrice } from "@/lib/pricing"
+import { useLocale } from "@/lib/i18n/locale"
+import { t } from "@/lib/i18n/translations"
 
 export default function CartPage() {
   const router = useRouter()
@@ -21,6 +23,7 @@ export default function CartPage() {
   const getItemCount = useCart((state) => state.getItemCount)
   const getItemUnitPrice = useCart((state) => state.getItemUnitPrice)
   const clearCart = useCart((state) => state.clearCart)
+  const { locale } = useLocale()
 
   const totalQty = getItemCount()
   const total = getTotal()
@@ -35,12 +38,12 @@ export default function CartPage() {
         <div className="max-w-md mx-auto text-center space-y-6">
           <Empty
             icon={<ShoppingCart className="size-16 text-muted-foreground" />}
-            title="Your cart is empty"
-            description="Start designing your custom t-shirt and add it to cart"
+            title={t("cart.empty.title", locale)}
+            description={t("cart.empty.desc", locale)}
           >
             <Link href="/customize">
               <Button className="gap-2">
-                Start Customizing
+                {t("cart.empty.cta", locale)}
                 <ArrowRight className="size-4" />
               </Button>
             </Link>
@@ -51,49 +54,50 @@ export default function CartPage() {
   }
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <div className="mb-8">
-        <h1 className="text-3xl md:text-4xl font-bold mb-2">Shopping Cart</h1>
-        <p className="text-muted-foreground">
-          {items.length} item{items.length !== 1 ? "s" : ""} in your cart
+    <div className="container mx-auto px-4 py-6 md:py-8">
+      <div className="mb-6 md:mb-8">
+        <h1 className="text-2xl md:text-3xl lg:text-4xl font-bold mb-2">{t("cart.title", locale)}</h1>
+        <p className="text-sm md:text-base text-muted-foreground">
+          {items.length} {t("cart.items.in.cart", locale)}
         </p>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8">
         {/* Cart Items */}
         <div className="lg:col-span-2 space-y-4">
           {items.map((item) => (
             <Card key={item.id}>
-              <CardContent className="p-6">
-                <div className="flex gap-4">
-                  {/* Preview Placeholder */}
+              <CardContent className="p-4 md:p-6">
+                <div className="flex flex-col sm:flex-row gap-4">
+                  {/* Preview Image */}
                   <div
-                    className="size-32 rounded-lg border-2 flex-shrink-0 flex items-center justify-center"
+                    className="w-full sm:w-32 h-40 sm:h-32 rounded-lg border-2 flex-shrink-0 flex items-center justify-center"
                     style={{ backgroundColor: item.design.tshirt_color }}
                   >
-                    <ShoppingCart className="size-8 opacity-50" />
+                    <ShoppingCart className="size-8 md:size-10 opacity-50" />
                   </div>
 
                   {/* Item Details */}
-                  <div className="flex-1 space-y-2">
-                    <div className="flex justify-between items-start">
-                      <div>
-                        <h3 className="font-semibold">Custom T-Shirt</h3>
-                        <div className="flex flex-wrap gap-2 mt-1">
-                          <Badge variant="secondary">
-                            Size: {item.size}
+                  <div className="flex-1 space-y-3 min-w-0">
+                    {/* Header with Remove Button */}
+                    <div className="flex justify-between items-start gap-2">
+                      <div className="min-w-0 flex-1">
+                        <h3 className="font-semibold text-base md:text-lg truncate">Custom T-Shirt</h3>
+                        <div className="flex flex-wrap gap-1.5 mt-1.5">
+                          <Badge variant="secondary" className="text-xs">
+                            {t("cart.size", locale)}: {item.size}
                           </Badge>
-                          <Badge variant="secondary">
-                            Color: {item.design.tshirt_color}
+                          <Badge variant="secondary" className="text-xs">
+                            {item.design.tshirt_color}
                           </Badge>
                           {item.design.front_design && (
-                            <Badge variant="secondary">
-                              Front Design
+                            <Badge variant="secondary" className="text-xs">
+                              {t("cart.front", locale)}
                             </Badge>
                           )}
                           {item.design.back_design && (
-                            <Badge variant="secondary">
-                              Back Design
+                            <Badge variant="secondary" className="text-xs">
+                              {t("cart.back", locale)}
                             </Badge>
                           )}
                         </div>
@@ -102,44 +106,49 @@ export default function CartPage() {
                         variant="ghost"
                         size="icon"
                         onClick={() => removeItem(item.id)}
-                        className="text-muted-foreground hover:text-destructive"
+                        className="size-11 text-muted-foreground hover:text-destructive flex-shrink-0"
+                        aria-label="Remove item"
                       >
-                        <Trash2 className="size-4" />
+                        <Trash2 className="size-5" />
                       </Button>
                     </div>
 
-                    {/* Quantity Controls */}
-                    <div className="flex items-center justify-between">
+                    {/* Quantity & Price */}
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pt-2">
+                      {/* Quantity Controls */}
                       <div className="flex items-center gap-2">
                         <Button
                           variant="outline"
                           size="icon"
-                          className="size-8"
+                          className="size-11"
                           onClick={() =>
                             updateQuantity(item.id, Math.max(1, item.quantity - 1))
                           }
                           disabled={item.quantity <= 1}
+                          aria-label={t("common.decrease", locale) || "Decrease quantity"}
                         >
-                          <Minus className="size-3" />
+                          <Minus className="size-4" />
                         </Button>
-                        <span className="w-8 text-center font-medium">
+                        <span className="w-10 text-center font-medium text-base" aria-label={t("cart.qty", locale)}>
                           {item.quantity}
                         </span>
                         <Button
                           variant="outline"
                           size="icon"
-                          className="size-8"
+                          className="size-11"
                           onClick={() =>
                             updateQuantity(item.id, Math.min(10, item.quantity + 1))
                           }
                           disabled={item.quantity >= 10}
+                          aria-label={t("common.increase", locale) || "Increase quantity"}
                         >
-                          <Plus className="size-3" />
+                          <Plus className="size-4" />
                         </Button>
                       </div>
 
-                      <div className="text-right">
-                        <div className="flex items-center gap-2 justify-end">
+                      {/* Price Info */}
+                      <div className="flex items-center justify-between sm:justify-end sm:text-right gap-2 sm:gap-3">
+                        <div className="flex items-center gap-2">
                           <Badge variant="secondary" className="text-xs">
                             {(() => {
                               const sides = item.design.front_design && item.design.back_design ? 2 : 1
@@ -147,11 +156,11 @@ export default function CartPage() {
                               return tier.name
                             })()}
                           </Badge>
-                          <span className="text-sm text-muted-foreground">
-                            {formatPrice(getItemUnitPrice(item.id))} each
+                          <span className="text-xs md:text-sm text-muted-foreground hidden sm:inline">
+                            {formatPrice(getItemUnitPrice(item.id))}/pc
                           </span>
                         </div>
-                        <p className="text-lg font-bold">
+                        <p className="text-base md:text-lg font-bold whitespace-nowrap">
                           {formatPrice(getItemUnitPrice(item.id) * item.quantity)}
                         </p>
                       </div>
@@ -165,56 +174,60 @@ export default function CartPage() {
           <Button
             variant="outline"
             onClick={clearCart}
-            className="gap-2"
+            className="gap-2 w-full sm:w-auto"
           >
             <Trash2 className="size-4" />
-            Clear Cart
+            {t("cart.clear", locale)}
           </Button>
         </div>
 
         {/* Order Summary */}
-        <Card className="h-fit sticky top-24">
-          <CardHeader>
-            <CardTitle>Order Summary</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {totalQty >= 5 && (
-              <Badge variant="secondary" className="w-full justify-center py-2 text-green-700 dark:text-green-400">
-                ✓ Harga {totalQty >= 50 ? "KOMUNITAS" : "BER-5"} aktif — hemat per kaos!
-              </Badge>
-            )}
-            <div className="space-y-3">
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Subtotal</span>
-                <span>{formatPrice(total)}</span>
+        <div className="lg:col-span-1">
+          <Card className="lg:sticky lg:top-24">
+            <CardHeader className="pb-4">
+              <CardTitle className="text-lg md:text-xl">{t("cart.summary", locale)}</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {totalQty >= 5 && (
+                <Badge variant="secondary" className="w-full justify-center py-2 text-sm text-green-700 dark:text-green-400">
+                  ✓ Harga {totalQty >= 50 ? "KOMUNITAS" : "BER-5"} {t("cart.price.active", locale)} — {t("cart.price.save", locale)}
+                </Badge>
+              )}
+              <div className="space-y-3">
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">{t("cart.subtotal", locale)} ({totalQty} item{totalQty !== 1 ? "s" : ""})</span>
+                  <span>{formatPrice(total)}</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">{t("cart.shipping", locale)}</span>
+                  <span>{formatPrice(shippingCost)}</span>
+                </div>
+                <Separator />
+                <div className="flex justify-between text-lg font-bold">
+                  <span>{t("cart.total", locale)}</span>
+                  <span>{formatPrice(grandTotal)}</span>
+                </div>
               </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Shipping</span>
-                <span>{formatPrice(shippingCost)}</span>
-              </div>
-              <Separator />
-              <div className="flex justify-between text-lg font-bold">
-                <span>Total</span>
-                <span>{formatPrice(grandTotal)}</span>
-              </div>
-            </div>
 
-            <Button
-              onClick={() => router.push("/checkout")}
-              className="w-full gap-2"
-              size="lg"
-            >
-              Proceed to Checkout
-              <ArrowRight className="size-4" />
-            </Button>
+              <div className="space-y-3 pt-2">
+                <Button
+                  onClick={() => router.push("/checkout")}
+                  className="w-full gap-2"
+                  size="lg"
+                >
+                  {t("cart.checkout", locale)}
+                  <ArrowRight className="size-4" />
+                </Button>
 
-            <Link href="/customize">
-              <Button variant="outline" className="w-full">
-                Continue Shopping
-              </Button>
-            </Link>
-          </CardContent>
-        </Card>
+                <Link href="/customize">
+                  <Button variant="outline" className="w-full">
+                    {t("cart.continue", locale)}
+                  </Button>
+                </Link>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
       </div>
     </div>
   )

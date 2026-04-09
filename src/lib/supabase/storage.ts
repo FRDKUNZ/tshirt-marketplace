@@ -147,3 +147,19 @@ async function uploadBlob(
 
   throw lastError || new Error('Failed to upload file after 3 attempts')
 }
+
+/**
+ * Upload a custom print image to the custom-prints bucket
+ * @param file - The image file to upload
+ * @param userId - The user's ID
+ * @returns The public URL of the uploaded image
+ */
+export async function uploadCustomPrintImage(
+  file: File,
+  userId: string
+): Promise<string> {
+  const extension = file.name.split('.').pop() || 'png'
+  const timestamp = Date.now()
+  const path = `${userId}/${timestamp}.${extension}`
+  return uploadFile(file, 'custom-prints', path)
+}

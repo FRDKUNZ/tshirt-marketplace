@@ -28,6 +28,9 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { getUnitPrice, formatRupiah } from "@/lib/pricing"
+import { useLocale } from "@/lib/i18n/locale"
+import { t } from "@/lib/i18n/translations"
+import { CustomPrintUpload } from "./custom-print-upload"
 
 // Fabric.js dynamic import (only on client)
 import { Canvas, Image as FabricImage, Path } from "fabric"
@@ -107,6 +110,7 @@ const MOCKUP_OFFSET_Y = 200
 export default function CustomizePage() {
   const router = useRouter()
   const addItem = useCart((state) => state.addItem)
+  const { locale } = useLocale()
 
   const frontCanvasRef = useRef<HTMLCanvasElement>(null)
   const backCanvasRef = useRef<HTMLCanvasElement>(null)
@@ -120,6 +124,51 @@ export default function CustomizePage() {
   const [selectedSize, setSelectedSize] = useState<string>("M")
   const [quantity, setQuantity] = useState(1)
   const [showCartDialog, setShowCartDialog] = useState(false)
+  const [isMobile, setIsMobile] = useState(false)
+  
+  // Track responsive canvas scale
+  const [canvasScale, setCanvasScale] = useState(1)
+  const wrapperRef = useRef<HTMLDivElement>(null)
+
+  // Detect mobile viewport and calculate ideal canvas scale
+  useEffect(() => {
+    const updateLayout = () => {
+      const mobileView = window.innerWidth < 1024
+      setIsMobile(mobileView)
+      
+      if (wrapperRef.current) {
+        // On mobile: single column, takes full padded width. On desktop: two columns.
+        const gapAndPadding = mobileView ? 32 : 64
+        const availableWidth = mobileView 
+          ? wrapperRef.current.clientWidth - gapAndPadding 
+          : (wrapperRef.current.clientWidth - gapAndPadding) / 2
+        
+        // Logical width is 400. Calculate scale needed to fit seamlessly
+        const scale = Math.min(1, availableWidth / 400)
+        setCanvasScale(scale)
+      }
+    }
+    
+    // Slight delay to ensure refs are attached
+    const timer = setTimeout(updateLayout, 10)
+    window.addEventListener("resize", updateLayout)
+    return () => {
+      clearTimeout(timer)
+      window.removeEventListener("resize", updateLayout)
+    }
+  }, [])
+
+  // Apply scale to Fabric instances dynamically when screen resizes
+  useEffect(() => {
+    if (frontFabricRef.current) {
+      frontFabricRef.current.setDimensions({ width: 400 * canvasScale, height: 500 * canvasScale })
+      frontFabricRef.current.setZoom(canvasScale)
+    }
+    if (backFabricRef.current) {
+      backFabricRef.current.setDimensions({ width: 400 * canvasScale, height: 500 * canvasScale })
+      backFabricRef.current.setZoom(canvasScale)
+    }
+  }, [canvasScale])
 
   const createTshirtBg = useCallback((canvas: Canvas, color: string, side: DesignSide) => {
     const outlinePath = side === "front" ? TSHIRT_FRONT_OUTLINE : TSHIRT_BACK_OUTLINE
@@ -156,11 +205,12 @@ export default function CustomizePage() {
 
     const initCanvas = (el: HTMLCanvasElement, side: DesignSide) => {
       const canvas = new Canvas(el, {
-        width: 400,
-        height: 500,
+        width: 400 * canvasScale,
+        height: 500 * canvasScale,
         backgroundColor: "transparent",
         selection: true,
       })
+      canvas.setZoom(canvasScale)
       createTshirtBg(canvas, tshirtColor, side)
       
       const clipRect = new Path(
@@ -193,7 +243,7 @@ export default function CustomizePage() {
       isInitializing.current = false
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []) // Empty dependency to only run on mount
+  }, [])
 
   // Sync mockup color when changed
   useEffect(() => {
@@ -440,106 +490,122 @@ export default function CustomizePage() {
   const pricing = getUnitPrice(quantity, printedSides)
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <div className="mb-8">
-        <h1 className="text-3xl md:text-4xl font-bold mb-2">Design Your T-Shirt</h1>
-        <p className="text-muted-foreground">
-          Upload images, position them on front and back, then add to cart
+    <div className="container mx-auto px-4 py-4 md:py-8">
+      {/* Header */}
+      <div className="mb-4 md:mb-8">
+        <h1 className="text-2xl md:text-3xl lg:text-4xl font-bold mb-1 md:mb-2">{t("cust.title", locale)}</h1>
+        <p className="text-sm md:text-base text-muted-foreground">
+          {t("cust.desc", locale)}
         </p>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-8">
         {/* Canvas Area */}
         <Card className="lg:col-span-2">
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <CardTitle>T-Shirt Designer</CardTitle>
-              <div className="flex gap-2">
-                <Button variant="outline" size="sm" onClick={handleExportPreview} className="gap-2">
-                  <Download data-icon="inline-start" className="size-4" />
-                  Export
-                </Button>
-                <Button variant="outline" size="sm" onClick={handleDeleteSelected} className="gap-2">
-                  <Trash2 data-icon="inline-start" className="size-4" />
-                  Delete
-                </Button>
-                <Button variant="outline" size="sm" onClick={handleClearAll} className="gap-2">
-                  <Trash2 data-icon="inline-start" className="size-4" />
-                  Clear
-                </Button>
-                <Button variant="outline" size="sm" onClick={handleExportPreview} className="gap-2">
-                  Preview Mockup
-                </Button>
-              </div>
+          <CardHeader className="pb-3 px-4 md:px-6">
+            <CardTitle className="text-base md:text-lg">{t("cust.designer", locale)}</CardTitle>
+            {/* Toolbar - Wrapped on mobile for accessibility */}
+            <div className="flex flex-wrap gap-2 pt-2 pb-2">
+              <Button variant="outline" size="sm" onClick={() => fileInputRef.current?.click()} className="gap-1.5 flex-1 sm:flex-none text-xs md:text-sm h-8 md:h-9">
+                <Upload data-icon="inline-start" className="size-3.5 md:size-4" />
+                {t("cust.upload", locale)}
+              </Button>
+              <Button variant="outline" size="sm" onClick={handleDeleteSelected} className="gap-1.5 flex-1 sm:flex-none text-xs md:text-sm h-8 md:h-9">
+                <Trash2 data-icon="inline-start" className="size-3.5 md:size-4" />
+                {t("cust.delete", locale)}
+              </Button>
+              <Button variant="outline" size="sm" onClick={handleClearAll} className="gap-1.5 flex-1 sm:flex-none text-xs md:text-sm h-8 md:h-9">
+                <Trash2 data-icon="inline-start" className="size-3.5 md:size-4" />
+                {t("cust.clear", locale)}
+              </Button>
+              <Button variant="outline" size="sm" onClick={handleExportPreview} className="gap-1.5 flex-1 sm:flex-none text-xs md:text-sm h-8 md:h-9">
+                <Download data-icon="inline-start" className="size-3.5 md:size-4" />
+                {t("cust.export", locale)}
+              </Button>
             </div>
-            <CardDescription>
-              Click &quot;Upload Image&quot; to add your artwork. Drag to move, corners to resize.
+            <CardDescription className="text-xs md:text-sm">
+              {t("cust.instruction", locale)}
             </CardDescription>
           </CardHeader>
           <CardContent>
             
-            {/* Step Indicator */}
-            <div className="flex justify-start items-center gap-8 px-4 pb-6 mb-6 border-b">
-              <div 
-                className={`flex items-center gap-3 cursor-pointer transition-all ${activeSide === 'front' ? '' : 'opacity-40 grayscale'}`} 
+            {/* Step Indicator - Tabs on mobile, side-by-side on desktop */}
+            <div className="flex items-center gap-3 md:gap-8 px-2 md:px-4 pb-4 md:pb-6 mb-4 md:mb-6 border-b">
+              <button
+                type="button"
+                className={`flex items-center gap-2 md:gap-3 cursor-pointer transition-all flex-1 text-left ${activeSide === 'front' ? '' : 'opacity-40 grayscale'}`}
                 onClick={() => setActiveSide('front')}
               >
-                <div className={`flex h-8 w-8 rounded-full items-center justify-center font-bold text-sm ${activeSide === 'front' ? 'bg-black text-white' : 'bg-muted text-muted-foreground'}`}>1</div>
-                <div className="flex flex-col">
-                  <span className="font-semibold text-sm">Front Side</span>
-                  <span className="text-xs text-muted-foreground">Upload your design</span>
+                <div className={`flex h-7 w-7 md:h-8 md:w-8 rounded-full items-center justify-center font-bold text-xs md:text-sm shrink-0 ${activeSide === 'front' ? 'bg-black text-white' : 'bg-muted text-muted-foreground'}`}>1</div>
+                <div className="flex flex-col min-w-0">
+                  <span className="font-semibold text-xs md:text-sm">{t("cust.front", locale)}</span>
+                  <span className="text-[10px] md:text-xs text-muted-foreground truncate">{t("cust.front.desc", locale)}</span>
                 </div>
-              </div>
-              
-              <ArrowRight className="text-muted-foreground w-4 h-4" />
-              
-              <div 
-                className={`flex items-center gap-3 cursor-pointer transition-all ${activeSide === 'back' ? '' : 'opacity-40 grayscale'}`} 
+              </button>
+
+              <ArrowRight className="text-muted-foreground w-3 h-3 md:w-4 md:h-4 shrink-0 hidden md:block" />
+
+              <button
+                type="button"
+                className={`flex items-center gap-2 md:gap-3 cursor-pointer transition-all flex-1 text-left ${activeSide === 'back' ? '' : 'opacity-40 grayscale'}`}
                 onClick={() => setActiveSide('back')}
               >
-                <div className={`flex h-8 w-8 rounded-full items-center justify-center font-bold text-sm ${activeSide === 'back' ? 'bg-black text-white' : 'bg-muted text-muted-foreground'}`}>2</div>
-                <div className="flex flex-col">
-                  <span className="font-semibold text-sm">Back Side</span>
-                  <span className="text-xs text-muted-foreground">Optional</span>
+                <div className={`flex h-7 w-7 md:h-8 md:w-8 rounded-full items-center justify-center font-bold text-xs md:text-sm shrink-0 ${activeSide === 'back' ? 'bg-black text-white' : 'bg-muted text-muted-foreground'}`}>2</div>
+                <div className="flex flex-col min-w-0">
+                  <span className="font-semibold text-xs md:text-sm">{t("cust.back", locale)}</span>
+                  <span className="text-[10px] md:text-xs text-muted-foreground truncate">{t("cust.back.desc", locale)}</span>
                 </div>
-              </div>
+              </button>
             </div>
 
-            {/* Canvas Unified Container */}
-            <div className="relative border border-dashed border-gray-300 rounded-lg p-6 pb-12 flex flex-col items-center bg-gray-50/30 overflow-hidden">
-              <div className="flex flex-col lg:flex-row gap-8 justify-center items-start w-full min-h-[500px]">
-                
-                {/* Front Canvas Container */}
-                <div 
-                  className="relative flex flex-col items-center group transition-all shrink-0 cursor-pointer"
+            {/* Canvas Area */}
+            <div ref={wrapperRef} className="relative border border-dashed border-gray-300 rounded-lg p-2 md:p-6 pb-12 md:pb-12 flex flex-col items-center bg-gray-50/30 overflow-hidden min-h-[300px]">
+              {/* Mobile: show only active side. Desktop: show both side-by-side */}
+              <div className={`flex ${isMobile ? 'flex-col' : 'flex-row'} gap-4 md:gap-8 justify-center items-start w-full`}>
+
+                {/* Front Canvas */}
+                <div
+                  className={`relative flex flex-col items-center group transition-all shrink-0 cursor-pointer ${isMobile && activeSide !== 'front' ? 'hidden' : ''}`}
                   onClick={() => setActiveSide('front')}
                 >
-                  <h3 className={`font-semibold text-lg mb-2 z-10 transition-colors ${activeSide === 'front' ? 'text-black' : 'text-gray-400 group-hover:text-gray-600'}`}>Front Side</h3>
+                  <h3 className={`font-semibold text-sm md:text-lg mb-1 md:mb-2 z-10 transition-colors ${activeSide === 'front' ? 'text-black' : 'text-gray-400 group-hover:text-gray-600'}`}>{t("cust.front", locale)}</h3>
                   <div className="relative">
-                    {/* Visual Print Area Hint */}
-                    <div className={`absolute border border-dashed border-gray-400 w-[140px] h-[200px] left-[130px] top-[80px] pointer-events-none z-10 flex items-center justify-center transition-all ${activeSide === 'front' ? 'opacity-100' : 'opacity-40'}`}>
-                      <span className="text-xs text-gray-500 font-medium tracking-wide">Upload your design</span>
+                    <div 
+                      className={`absolute border border-dashed border-gray-400 pointer-events-none z-10 flex items-center justify-center transition-all bg-white/10 ${activeSide === 'front' ? 'opacity-100 ring-2 ring-primary/20' : 'opacity-40'}`}
+                      style={{
+                        width: `${PRINT_AREA.width * canvasScale}px`,
+                        height: `${PRINT_AREA.height * canvasScale}px`,
+                        left: `${PRINT_AREA.left * canvasScale}px`,
+                        top: `${PRINT_AREA.top * canvasScale}px`,
+                      }}
+                    >
+                      <span className="text-[10px] md:text-xs text-gray-500 font-medium tracking-wide text-center px-1">{t("cust.area", locale)}</span>
                     </div>
-                    {/* Canvas Wrapper */}
-                    <div className={`transition-all ${activeSide === 'front' ? 'opacity-100 relative z-20' : 'opacity-60 group-hover:opacity-80 relative z-0'}`}>
+                    <div className={`transition-all ${activeSide === 'front' ? 'opacity-100 relative z-20 drop-shadow-md' : 'opacity-60 group-hover:opacity-80 relative z-0'}`}>
                       <canvas ref={frontCanvasRef} />
                     </div>
                   </div>
                 </div>
 
-                {/* Back Canvas Container */}
-                <div 
-                  className="relative flex flex-col items-center group transition-all shrink-0 cursor-pointer"
+                {/* Back Canvas */}
+                <div
+                  className={`relative flex flex-col items-center group transition-all shrink-0 cursor-pointer ${isMobile && activeSide !== 'back' ? 'hidden' : ''}`}
                   onClick={() => setActiveSide('back')}
                 >
-                  <h3 className={`font-semibold text-lg mb-2 z-10 transition-colors ${activeSide === 'back' ? 'text-black' : 'text-gray-400 group-hover:text-gray-600'}`}>Back Side</h3>
+                  <h3 className={`font-semibold text-sm md:text-lg mb-1 md:mb-2 z-10 transition-colors ${activeSide === 'back' ? 'text-black' : 'text-gray-400 group-hover:text-gray-600'}`}>{t("cust.back", locale)}</h3>
                   <div className="relative">
-                    {/* Visual Print Area Hint */}
-                    <div className={`absolute border border-dashed border-gray-400 w-[140px] h-[200px] left-[130px] top-[80px] pointer-events-none z-10 flex items-center justify-center transition-all ${activeSide === 'back' ? 'opacity-100' : 'opacity-40'}`}>
-                      <span className="text-xs text-gray-500 font-medium tracking-wide">Upload your design</span>
+                     <div 
+                      className={`absolute border border-dashed border-gray-400 pointer-events-none z-10 flex items-center justify-center transition-all bg-white/10 ${activeSide === 'back' ? 'opacity-100 ring-2 ring-primary/20' : 'opacity-40'}`}
+                      style={{
+                        width: `${PRINT_AREA.width * canvasScale}px`,
+                        height: `${PRINT_AREA.height * canvasScale}px`,
+                        left: `${PRINT_AREA.left * canvasScale}px`,
+                        top: `${PRINT_AREA.top * canvasScale}px`,
+                      }}
+                    >
+                      <span className="text-[10px] md:text-xs text-gray-500 font-medium tracking-wide text-center px-1">{t("cust.area", locale)}</span>
                     </div>
-                    {/* Canvas Wrapper */}
-                    <div className={`transition-all ${activeSide === 'back' ? 'opacity-100 relative z-20' : 'opacity-60 group-hover:opacity-80 relative z-0'}`}>
+                    <div className={`transition-all ${activeSide === 'back' ? 'opacity-100 relative z-20 drop-shadow-md' : 'opacity-60 group-hover:opacity-80 relative z-0'}`}>
                       <canvas ref={backCanvasRef} />
                     </div>
                   </div>
@@ -547,7 +613,7 @@ export default function CustomizePage() {
 
               </div>
 
-              {/* Centered Upload Button Overlay on Bottom Border */}
+              {/* Upload Button */}
               <div className="absolute -bottom-0 w-full flex justify-center pointer-events-none">
                 <div className="pointer-events-auto bg-white rounded-full p-1 border">
                   <input
@@ -557,9 +623,9 @@ export default function CustomizePage() {
                     onChange={handleImageUpload}
                     className="hidden"
                   />
-                  <Button onClick={() => fileInputRef.current?.click()} className="gap-2 bg-black text-white hover:bg-black/90 px-8 rounded-full shadow-md">
+                  <Button onClick={() => fileInputRef.current?.click()} size="lg" className="gap-2 bg-black text-white hover:bg-black/90 px-8 rounded-full shadow-[0_8px_30px_rgb(0,0,0,0.12)] text-sm font-semibold transition-transform hover:scale-105 active:scale-95">
                     <Upload data-icon="inline-start" className="size-4" />
-                    Upload Image
+                    {t("cust.upload.btn", locale)}
                   </Button>
                 </div>
               </div>
@@ -569,18 +635,18 @@ export default function CustomizePage() {
         </Card>
 
         {/* Controls */}
-        <div className="space-y-6">
+        <div className="space-y-4 md:space-y-6">
           <Card>
-            <CardHeader>
-              <CardTitle className="text-lg">T-Shirt Color</CardTitle>
+            <CardHeader className="py-3 md:py-4">
+              <CardTitle className="text-sm md:text-lg">{t("cust.color.title", locale)}</CardTitle>
             </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-5 gap-3">
+            <CardContent className="pt-0">
+              <div className="grid grid-cols-5 gap-2 md:gap-3">
                 {TSHIRT_COLORS.map((color) => (
                   <button
                     key={color.value}
                     onClick={() => setTshirtColor(color.value)}
-                    className={`size-12 rounded-lg border-2 transition-all ${
+                    className={`size-8 sm:size-10 md:size-12 rounded-lg border-2 transition-all ${
                       tshirtColor === color.value
                         ? "border-primary ring-2 ring-primary ring-offset-2"
                         : "border-muted"
@@ -591,26 +657,26 @@ export default function CustomizePage() {
                   />
                 ))}
               </div>
-              <p className="text-sm text-muted-foreground mt-2">
-                Selected: {TSHIRT_COLORS.find((c) => c.value === tshirtColor)?.name}
+              <p className="text-xs md:text-sm text-muted-foreground mt-2">
+                {t("cust.color.selected", locale)} {TSHIRT_COLORS.find((c) => c.value === tshirtColor)?.name}
               </p>
             </CardContent>
           </Card>
 
           <Card>
-            <CardHeader>
-              <CardTitle className="text-lg">Size & Quantity</CardTitle>
+            <CardHeader className="py-3 md:py-4">
+              <CardTitle className="text-sm md:text-lg">{t("cust.size.qty.title", locale)}</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent className="pt-0 space-y-3 md:space-y-4">
               <div>
-                <Label htmlFor="size">Size</Label>
+                <Label htmlFor="size" className="text-xs md:text-sm">{t("cust.size", locale)}</Label>
                 <Select value={selectedSize} onValueChange={setSelectedSize}>
-                  <SelectTrigger id="size">
+                  <SelectTrigger id="size" className="text-sm">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
                     {TSHIRT_SIZES.map((size) => (
-                      <SelectItem key={size} value={size}>
+                      <SelectItem key={size} value={size} className="text-sm">
                         {size}
                       </SelectItem>
                     ))}
@@ -619,7 +685,7 @@ export default function CustomizePage() {
               </div>
 
               <div>
-                <Label>Quantity: {quantity}</Label>
+                <Label className="text-xs md:text-sm">{t("cust.qty", locale)} {quantity}</Label>
                 <Slider
                   value={[quantity]}
                   onValueChange={(v) => setQuantity(v[0])}
@@ -633,53 +699,56 @@ export default function CustomizePage() {
           </Card>
 
           <Card>
-            <CardContent className="pt-6 space-y-4">
+            <CardContent className="pt-4 md:pt-6 space-y-3 md:space-y-4">
               <div className="flex justify-between items-center">
-                <span className="text-muted-foreground">Unit Price</span>
-                <div className="flex items-center gap-2">
-                  <Badge variant="secondary" className="text-xs">
+                <span className="text-xs md:text-sm text-muted-foreground">{t("cust.unit.price", locale)}</span>
+                <div className="flex items-center gap-1.5">
+                  <Badge variant="secondary" className="text-[10px] md:text-xs px-1.5 py-0">
                     {pricing.tier.name}
                   </Badge>
-                  <span className="font-semibold">{formatPrice(pricing.price)}</span>
+                  <span className="font-semibold text-sm md:text-base">{formatPrice(pricing.price)}</span>
                 </div>
               </div>
               {printedSides === 2 && (
-                <p className="text-xs text-muted-foreground">
-                  2 sisi sablon (depan + belakang)
+                <p className="text-[10px] md:text-xs text-muted-foreground">
+                  {t("cust.sides.2", locale)}
                 </p>
               )}
               {quantity >= 5 && (
-                <p className="text-xs text-green-600 dark:text-green-400">
-                  ✓ Hemat {formatPrice(89000 - pricing.price)} per kaos!
+                <p className="text-[10px] md:text-xs text-green-600 dark:text-green-400">
+                  {t("cust.save", locale)} {formatPrice(89000 - pricing.price)} {t("cust.save.per", locale)}
                 </p>
               )}
-              <div className="flex justify-between items-center text-lg font-bold">
-                <span>Total</span>
+              <div className="flex justify-between items-center text-base md:text-lg font-bold">
+                <span>{t("cust.total", locale)}</span>
                 <span>{formatPrice(pricing.price * quantity)}</span>
               </div>
 
               <Button onClick={handleAddToCart} className="w-full gap-2" size="lg">
                 <ShoppingCart data-icon="inline-start" className="size-4" />
-                Add to Cart
+                {t("cust.add.cart", locale)}
               </Button>
             </CardContent>
           </Card>
+
+          {/* Custom Print Upload */}
+          <CustomPrintUpload />
         </div>
       </div>
 
       <Dialog open={showCartDialog} onOpenChange={setShowCartDialog}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Added to Cart!</DialogTitle>
+            <DialogTitle>{t("cust.add.cart.title", locale)}</DialogTitle>
             <DialogDescription>
-              Your custom t-shirt has been added to the cart.
+              {t("cust.add.cart.desc", locale)}
             </DialogDescription>
           </DialogHeader>
           <div className="flex flex-col gap-4">
             <div className="text-sm text-muted-foreground">
-              <p>Size: {selectedSize}</p>
-              <p>Quantity: {quantity}</p>
-              <p>Color: {TSHIRT_COLORS.find((c) => c.value === tshirtColor)?.name}</p>
+              <p>{t("cust.size", locale)}: {selectedSize}</p>
+              <p>{t("cust.qty", locale)}: {quantity}</p>
+              <p>{t("orders.color", locale)}: {TSHIRT_COLORS.find((c) => c.value === tshirtColor)?.name}</p>
             </div>
           </div>
           <DialogFooter className="gap-2 sm:gap-0">
@@ -690,9 +759,9 @@ export default function CustomizePage() {
                 router.push("/customize")
               }}
             >
-              Continue Designing
+              {t("cust.add.cart.continue", locale)}
             </Button>
-            <Button onClick={() => router.push("/cart")}>Go to Cart</Button>
+            <Button onClick={() => router.push("/cart")}>{t("cust.add.cart.goto", locale)}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

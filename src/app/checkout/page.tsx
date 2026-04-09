@@ -17,6 +17,8 @@ import { uploadOrderImageFromDataUrl } from "@/lib/supabase/storage"
 import { Loader2, ArrowLeft, CreditCard } from "lucide-react"
 import Link from "next/link"
 import { formatRupiah, getUnitPrice } from "@/lib/pricing"
+import { useLocale } from "@/lib/i18n/locale"
+import { t } from "@/lib/i18n/translations"
 
 declare global {
   interface Window {
@@ -30,6 +32,7 @@ export default function CheckoutPage() {
   const getTotal = useCart((state) => state.getTotal)
   const getItemCount = useCart((state) => state.getItemCount)
   const clearCart = useCart((state) => state.clearCart)
+  const { locale } = useLocale()
 
   const [isLoading, setIsLoading] = useState(false)
   const [isHydrated, setIsHydrated] = useState(false)
@@ -347,12 +350,12 @@ export default function CheckoutPage() {
         <Link href="/cart">
           <Button variant="ghost" className="gap-2 mb-4">
             <ArrowLeft className="size-4" />
-            Back to Cart
+            {t("checkout.back", locale)}
           </Button>
         </Link>
-        <h1 className="text-3xl md:text-4xl font-bold mb-2">Checkout</h1>
+        <h1 className="text-3xl md:text-4xl font-bold mb-2">{t("checkout.title", locale)}</h1>
         <p className="text-muted-foreground">
-          Enter your shipping details and proceed to payment
+          {t("checkout.desc", locale)}
         </p>
       </div>
 
@@ -362,15 +365,15 @@ export default function CheckoutPage() {
           <div className="lg:col-span-2 space-y-6">
             <Card>
               <CardHeader>
-                <CardTitle>Shipping Information</CardTitle>
+                <CardTitle>{t("checkout.shipping", locale)}</CardTitle>
                 <CardDescription>
-                  Where should we deliver your order?
+                  {t("checkout.shipping.where", locale)}
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <Label htmlFor="recipient_name">Full Name *</Label>
+                    <Label htmlFor="recipient_name">{t("checkout.name", locale)} *</Label>
                     <Input
                       id="recipient_name"
                       name="recipient_name"
@@ -386,7 +389,7 @@ export default function CheckoutPage() {
                   </div>
 
                   <div>
-                    <Label htmlFor="recipient_phone">Phone Number *</Label>
+                    <Label htmlFor="recipient_phone">{t("checkout.phone", locale)} *</Label>
                     <Input
                       id="recipient_phone"
                       name="recipient_phone"
@@ -404,7 +407,7 @@ export default function CheckoutPage() {
                 </div>
 
                 <div>
-                  <Label htmlFor="shipping_address">Street Address *</Label>
+                  <Label htmlFor="shipping_address">{t("checkout.address", locale)} *</Label>
                   <Textarea
                     id="shipping_address"
                     name="shipping_address"
@@ -422,7 +425,7 @@ export default function CheckoutPage() {
 
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                   <div>
-                    <Label htmlFor="shipping_city">City *</Label>
+                    <Label htmlFor="shipping_city">{t("checkout.city", locale)} *</Label>
                     <Input
                       id="shipping_city"
                       name="shipping_city"
@@ -438,7 +441,7 @@ export default function CheckoutPage() {
                   </div>
 
                   <div>
-                    <Label htmlFor="shipping_province">Province *</Label>
+                    <Label htmlFor="shipping_province">{t("checkout.province", locale)} *</Label>
                     <Input
                       id="shipping_province"
                       name="shipping_province"
@@ -454,7 +457,7 @@ export default function CheckoutPage() {
                   </div>
 
                   <div>
-                    <Label htmlFor="shipping_postal_code">Postal Code *</Label>
+                    <Label htmlFor="shipping_postal_code">{t("checkout.postal", locale)} *</Label>
                     <Input
                       id="shipping_postal_code"
                       name="shipping_postal_code"
@@ -471,14 +474,14 @@ export default function CheckoutPage() {
                 </div>
 
                 <div>
-                  <Label htmlFor="notes">Order Notes (Optional)</Label>
+                  <Label htmlFor="notes">{t("checkout.notes", locale)}</Label>
                   <Textarea
                     id="notes"
                     name="notes"
                     value={formData.notes}
                     onChange={handleInputChange}
                     rows={2}
-                    placeholder="Any special instructions for your order?"
+                    placeholder={t("checkout.notes.placeholder", locale)}
                   />
                 </div>
               </CardContent>
@@ -489,12 +492,12 @@ export default function CheckoutPage() {
           <div>
             <Card className="sticky top-24">
               <CardHeader>
-                <CardTitle>Order Summary</CardTitle>
+                <CardTitle>{t("cart.summary", locale)}</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 {totalQty >= 5 && (
                   <Badge variant="secondary" className="w-full justify-center py-2 text-green-700 dark:text-green-400">
-                    ✓ Harga {totalQty >= 50 ? "KOMUNITAS" : "BER-5"} aktif
+                    ✓ Harga {totalQty >= 50 ? "KOMUNITAS" : "BER-5"} {t("cart.price.active", locale)}
                   </Badge>
                 )}
                 {/* Items */}
@@ -507,7 +510,7 @@ export default function CheckoutPage() {
                         <div>
                           <p className="font-medium">Custom T-Shirt x{item.quantity}</p>
                           <p className="text-muted-foreground">
-                            Size: {item.size}
+                            {t("orders.size.label", locale)}: {item.size}
                           </p>
                         </div>
                         <p className="font-medium">
@@ -523,16 +526,16 @@ export default function CheckoutPage() {
                 {/* Totals */}
                 <div className="space-y-2">
                   <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">Subtotal</span>
+                    <span className="text-muted-foreground">{t("cart.subtotal", locale)}</span>
                     <span>{formatPrice(total)}</span>
                   </div>
                   <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">Shipping</span>
+                    <span className="text-muted-foreground">{t("cart.shipping", locale)}</span>
                     <span>{formatPrice(shippingCost)}</span>
                   </div>
                   <Separator />
                   <div className="flex justify-between text-lg font-bold">
-                    <span>Total</span>
+                    <span>{t("cart.total", locale)}</span>
                     <span>{formatPrice(grandTotal)}</span>
                   </div>
                 </div>
@@ -546,18 +549,18 @@ export default function CheckoutPage() {
                   {isLoading ? (
                     <>
                       <Loader2 className="size-4 animate-spin" />
-                      Processing...
+                      {t("checkout.processing", locale)}
                     </>
                   ) : (
                     <>
                       <CreditCard className="size-4" />
-                      Proceed to Payment
+                      {t("checkout.pay", locale)}
                     </>
                   )}
                 </Button>
 
                 <p className="text-xs text-muted-foreground text-center">
-                  Secure payment powered by Midtrans
+                  {t("checkout.secure", locale)}
                 </p>
               </CardContent>
             </Card>

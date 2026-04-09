@@ -15,6 +15,7 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { ArrowLeft, Package, MapPin, CreditCard, ShoppingBag } from "lucide-react"
+import { CancelOrderButton } from "../cancel-order-button"
 
 export default async function OrderDetailPage({
   params,
@@ -262,6 +263,12 @@ export default async function OrderDetailPage({
                   <Link href={`/payment/${order.id}?token=${payment.midtrans_order_id}`}>
                     <Button className="w-full mt-4">Complete Payment</Button>
                   </Link>
+                )}
+
+                {(order.status === "pending" || order.status === "paid") && (
+                  <div className="pt-2">
+                    <CancelOrderButton orderId={order.id} orderNumber={order.order_number} />
+                  </div>
                 )}
               </CardContent>
             </Card>

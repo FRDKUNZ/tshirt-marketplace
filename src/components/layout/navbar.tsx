@@ -14,11 +14,15 @@ import {
 } from "@/components/ui/sheet"
 import { useCart } from "@/lib/store/cart"
 import { useState, useEffect } from "react"
+import { ThemeToggle } from "./theme-toggle"
+import { LanguageSwitcher } from "./language-switcher"
+import { useLocale } from "@/lib/i18n/locale"
+import { t } from "@/lib/i18n/translations"
 
 const navLinks = [
-  { href: "/", label: "Home", icon: Home },
-  { href: "/customize", label: "Customize", icon: Palette },
-  { href: "/pricing", label: "Pricing", icon: Tag },
+  { href: "/", labelKey: "nav.home" as const, icon: Home },
+  { href: "/customize", labelKey: "nav.customize" as const, icon: Palette },
+  { href: "/pricing", labelKey: "nav.pricing" as const, icon: Tag },
 ]
 
 export function Navbar() {
@@ -26,6 +30,7 @@ export function Navbar() {
   const itemCount = useCart((state) => state.getItemCount())
   const [isOpen, setIsOpen] = useState(false)
   const [mounted, setMounted] = useState(false)
+  const { locale } = useLocale()
 
   // Prevent hydration mismatch: only show cart badge after client mount
   useEffect(() => {
@@ -54,13 +59,15 @@ export function Navbar() {
                     : "text-muted-foreground"
                 }`}
               >
-                {link.label}
+                {t(link.labelKey, locale)}
               </Link>
             ))}
           </nav>
 
           {/* Desktop Actions */}
-          <div className="hidden md:flex items-center gap-4">
+          <div className="hidden md:flex items-center gap-2">
+            <LanguageSwitcher />
+            <ThemeToggle />
             <Link href="/cart">
               <Button variant="ghost" size="icon" className="relative">
                 <ShoppingCart className="size-5" />
@@ -107,15 +114,22 @@ export function Navbar() {
                       }`}
                     >
                       <Icon className="size-4" />
-                      {link.label}
+                      {t(link.labelKey, locale)}
                     </Link>
                   )
                 })}
-                <div className="flex items-center gap-2 mt-4 pt-4 border-t">
+
+                {/* Theme & Language Toggles */}
+                <div className="flex items-center gap-2 pt-4 border-t">
+                  <LanguageSwitcher />
+                  <ThemeToggle />
+                </div>
+
+                <div className="flex items-center gap-2 mt-2 pt-4 border-t">
                   <Link href="/cart" onClick={() => setIsOpen(false)}>
                     <Button variant="outline" className="w-full justify-start gap-2">
                       <ShoppingCart className="size-4" />
-                      Cart ({mounted ? itemCount : 0})
+                      {t("nav.cart", locale)} ({mounted ? itemCount : 0})
                     </Button>
                   </Link>
                   <Link href="/profile" onClick={() => setIsOpen(false)}>

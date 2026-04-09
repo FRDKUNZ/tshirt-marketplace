@@ -232,6 +232,47 @@ export type Database = {
           updated_at?: string | null
         }
       }
+      custom_print_uploads: {
+        Row: {
+          id: string
+          user_id: string | null
+          file_name: string
+          file_url: string
+          file_size: number | null
+          file_type: string | null
+          description: string | null
+          status: string | null
+          admin_notes: string | null
+          created_at: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          id?: string
+          user_id?: string | null
+          file_name: string
+          file_url: string
+          file_size?: number | null
+          file_type?: string | null
+          description?: string | null
+          status?: string | null
+          admin_notes?: string | null
+          created_at?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          id?: string
+          user_id?: string | null
+          file_name?: string
+          file_url?: string
+          file_size?: number | null
+          file_type?: string | null
+          description?: string | null
+          status?: string | null
+          admin_notes?: string | null
+          created_at?: string | null
+          updated_at?: string | null
+        }
+      }
     }
     Views: {
       [_ in never]: never
