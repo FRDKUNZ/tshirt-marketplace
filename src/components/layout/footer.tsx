@@ -29,7 +29,7 @@ export function Footer() {
           <div className="space-y-4">
             <Link href="/" className="flex items-center gap-2">
               <Shirt className="size-6 text-primary" />
-              <span className="text-xl font-bold">TeeCraft</span>
+              <span className="text-xl font-bold">Azure Store</span>
             </Link>
             <p className="text-sm text-muted-foreground">
               Design and order custom printed t-shirts. Upload your designs, choose colors, and get unique tees delivered.
@@ -92,11 +92,11 @@ export function Footer() {
 
         {/* Bottom */}
         <div className="flex flex-col md:flex-row justify-between items-center gap-4 text-sm text-muted-foreground">
-          <p>&copy; {new Date().getFullYear()} TeeCraft. All rights reserved.</p>
+          <p>&copy; {new Date().getFullYear()} Azure Store. All rights reserved.</p>
           <div className="flex items-center gap-6">
             <div className="flex items-center gap-2">
               <Mail className="size-4" />
-              <span>support@teecraft.com</span>
+              <span>support@azurestore.com</span>
             </div>
           </div>
         </div>

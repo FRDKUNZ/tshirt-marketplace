@@ -77,6 +77,10 @@ export const cartItemSchema = z.object({
   quantity: z.number().min(1).max(10),
   size: z.enum(['S', 'M', 'L', 'XL', 'XXL']),
   unit_price: z.number().min(0),
+  // Additional data for order storage
+  mockupDataUrl: z.string().optional(),
+  originalFrontImageDataUrl: z.string().optional(),
+  originalBackImageDataUrl: z.string().optional(),
 })
 
 export type CartItem = z.infer<typeof cartItemSchema>

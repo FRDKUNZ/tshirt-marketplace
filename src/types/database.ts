@@ -156,6 +156,9 @@ export type Database = {
           front_design_url: string | null
           back_design_url: string | null
           preview_url: string | null
+          original_front_image_url: string | null
+          original_back_image_url: string | null
+          mockup_url: string | null
         }
         Insert: {
           id?: string
@@ -168,6 +171,9 @@ export type Database = {
           front_design_url?: string | null
           back_design_url?: string | null
           preview_url?: string | null
+          original_front_image_url?: string | null
+          original_back_image_url?: string | null
+          mockup_url?: string | null
         }
         Update: {
           id?: string
@@ -180,6 +186,9 @@ export type Database = {
           front_design_url?: string | null
           back_design_url?: string | null
           preview_url?: string | null
+          original_front_image_url?: string | null
+          original_back_image_url?: string | null
+          mockup_url?: string | null
         }
       }
       payments: {

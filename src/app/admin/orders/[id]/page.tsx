@@ -22,7 +22,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { ArrowLeft, Package, MapPin, CreditCard, ShoppingBag, User } from "lucide-react"
+import { ArrowLeft, Package, MapPin, CreditCard, ShoppingBag, User, Image as ImageIcon } from "lucide-react"
 
 const ORDER_STATUSES = ["pending", "paid", "processing", "shipped", "delivered", "cancelled", "refunded"] as const
 
@@ -222,6 +222,102 @@ export default async function AdminOrderDetailPage({
                   ))}
                 </TableBody>
               </Table>
+
+              {/* Design Images for Sablon */}
+              {orderItems?.some((item: any) => item.mockup_url || item.original_front_image_url || item.original_back_image_url) && (
+                <div className="mt-8 space-y-6">
+                  <h3 className="text-lg font-semibold flex items-center gap-2">
+                    <ImageIcon className="size-5" />
+                    Design Images for Printing
+                  </h3>
+
+                  {orderItems.map((item: any, index: number) => (
+                    <div key={item.id} className="space-y-4">
+                      <h4 className="font-medium text-muted-foreground">
+                        Item {index + 1} - {TSHIRT_COLORS[item.tshirt_color] || item.tshirt_color} ({item.size}) x{item.quantity}
+                      </h4>
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        {/* Mockup Preview */}
+                        {item.mockup_url && (
+                          <div className="space-y-2">
+                            <p className="text-sm font-medium">Mockup Preview</p>
+                            <div className="aspect-square rounded-lg overflow-hidden border bg-muted">
+                              <img
+                                src={item.mockup_url}
+                                alt="Mockup preview"
+                                className="size-full object-contain"
+                              />
+                            </div>
+                            <a
+                              href={item.mockup_url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-xs text-primary hover:underline"
+                            >
+                              Open full size
+                            </a>
+                          </div>
+                        )}
+
+                        {/* Original Front Design (for sablon) */}
+                        {item.original_front_image_url && (
+                          <div className="space-y-2">
+                            <p className="text-sm font-medium text-green-600">
+                              Original Front Design (Sablon)
+                            </p>
+                            <div className="aspect-square rounded-lg overflow-hidden border bg-white">
+                              <img
+                                src={item.original_front_image_url}
+                                alt="Original front design"
+                                className="size-full object-contain"
+                              />
+                            </div>
+                            <a
+                              href={item.original_front_image_url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-xs text-primary hover:underline"
+                            >
+                              Download original
+                            </a>
+                          </div>
+                        )}
+
+                        {/* Original Back Design (for sablon) */}
+                        {item.original_back_image_url && (
+                          <div className="space-y-2">
+                            <p className="text-sm font-medium text-green-600">
+                              Original Back Design (Sablon)
+                            </p>
+                            <div className="aspect-square rounded-lg overflow-hidden border bg-white">
+                              <img
+                                src={item.original_back_image_url}
+                                alt="Original back design"
+                                className="size-full object-contain"
+                              />
+                            </div>
+                            <a
+                              href={item.original_back_image_url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-xs text-primary hover:underline"
+                            >
+                              Download original
+                            </a>
+                          </div>
+                        )}
+
+                        {/* No images fallback */}
+                        {!item.mockup_url && !item.original_front_image_url && !item.original_back_image_url && (
+                          <div className="col-span-3 text-center py-8 text-muted-foreground">
+                            No design images available for this item
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </CardContent>
           </Card>
 

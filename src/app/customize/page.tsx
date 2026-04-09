@@ -131,8 +131,59 @@ export default function CustomizePage() {
     front: [],
     back: [],
   })
-  const designsRef = useRef(designs)
-  designsRef.current = designs
+
+  // PLAIN JS object - outside React, no re-renders, no batching issues
+  // This is the ABSOLUTE source of truth for design data
+  const designStore = useRef<{ front: DesignElement[]; back: DesignElement[] }>({
+    front: [],
+    back: [],
+  }).current
+
+  // Read current canvas objects and return them as DesignElement[]
+  const readCanvas = useCallback((): DesignElement[] => {
+    if (!fabricCanvasRef.current) return []
+
+    return fabricCanvasRef.current
+      .getObjects()
+      .filter((obj) => {
+        const id = obj.get("id") || ""
+        return !id.startsWith("tshirt-") && id !== "clip-rect"
+      })
+      .map((obj) => {
+        const fabricImg = obj as FabricImage
+        return {
+          src: fabricImg.getSrc?.() || "",
+          position: {
+            x: obj.left || 0,
+            y: obj.top || 0,
+            scaleX: obj.scaleX || 1,
+            scaleY: obj.scaleY || 1,
+            rotation: obj.angle || 0,
+          },
+          name: obj.get("name") || "uploaded-image",
+        }
+      })
+      .filter((el) => el.src)
+  }, [])
+
+  // Save current canvas to designStore for the given side
+  // Call this BEFORE switching tabs
+  const saveCurrentSide = useCallback(() => {
+    const elements = readCanvas()
+    console.log(`========== [SAVE START] ==========`)
+    console.log(`[SAVE] Current activeSide (closure): "${activeSide}"`)
+    console.log(`[SAVE] Canvas has ${elements.length} element(s)`)
+    console.log(`[SAVE] Before save: designStore.front=${designStore.front.length}, designStore.back=${designStore.back.length}`)
+    
+    designStore[activeSide] = elements
+    console.log(`[SAVE] After save: designStore.front=${designStore.front.length}, designStore.back=${designStore.back.length}`)
+    console.log(`[SAVE] designStore.front[0]?.name:`, designStore.front[0]?.name || "empty")
+    console.log(`[SAVE] designStore.back[0]?.name:`, designStore.back[0]?.name || "empty")
+    console.log(`========== [SAVE END] ==========`)
+    
+    // Also sync to state for UI consumers (cart, etc.)
+    setDesigns({ front: designStore.front, back: designStore.back })
+  }, [activeSide, readCanvas, designStore])
 
   const createTshirtBg = useCallback((canvas: Canvas, color: string, side: DesignSide) => {
     const outlinePath = side === "front" ? TSHIRT_FRONT_OUTLINE : TSHIRT_BACK_OUTLINE
@@ -193,16 +244,16 @@ export default function CustomizePage() {
     )
     canvas.add(clipRect)
 
-    // Event listeners for object modifications
+    // Event listeners - save current side whenever canvas objects change
     canvas.on("object:modified", () => {
-      saveCurrentDesign()
+      saveCurrentSide()
     })
 
     canvas.on("object:added", (e: any) => {
       if (e.target) {
         const id = e.target.get("id") || ""
         if (!id.startsWith("tshirt-") && id !== "clip-rect") {
-          saveCurrentDesign()
+          saveCurrentSide()
         }
       }
     })
@@ -215,31 +266,33 @@ export default function CustomizePage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  // Sync mockup when color changes or side switches
+  // Sync mockup when side or color changes
+  // Reads from designStore (plain JS object, no React issues)
   useEffect(() => {
+    console.log(`========== [SYNC START] ==========`)
+    console.log(`[SYNC] New activeSide: "${activeSide}"`)
+    console.log(`[SYNC] designStore state: front=${designStore.front.length} (name: ${designStore.front[0]?.name || "empty"}), back=${designStore.back.length} (name: ${designStore.back[0]?.name || "empty"})`)
+    console.log(`[SYNC] Will restore from designStore["${activeSide}"] which has ${designStore[activeSide].length} element(s)`)
+    
     if (!fabricCanvasRef.current) {
-      console.log("[tshirt] useEffect skipped: canvas not ready")
+      console.log(`[SYNC] No canvas, skipping`)
       return
     }
 
-    console.log(`[tshirt] Color/side changed: color=${tshirtColor}, side=${activeSide}`)
     const canvas = fabricCanvasRef.current
-    const currentDesign = activeSide === "front" ? designsRef.current.front : designsRef.current.back
 
-    // Remove all t-shirt objects (outline + fills)
-    const beforeCount = canvas.getObjects().length
+    // Remove all t-shirt objects
     canvas.getObjects()
       .filter((obj) => {
         const id = obj.get("id") || ""
         return id.startsWith("tshirt-")
       })
       .forEach((obj) => canvas.remove(obj))
-    console.log(`[tshirt] Removed tshirt objects, before: ${beforeCount}, after: ${canvas.getObjects().length}`)
 
-    // Recreate t-shirt background for current side & color
+    // Recreate t-shirt background
     createTshirtBg(canvas, tshirtColor, activeSide)
 
-    // Remove existing design images and restore from state
+    // Remove design images
     canvas.getObjects()
       .filter((obj) => {
         const id = obj.get("id") || ""
@@ -247,15 +300,25 @@ export default function CustomizePage() {
       })
       .forEach((obj) => canvas.remove(obj))
 
-    // Restore design elements for current side
-    let loadedCount = 0
-    const totalToLoad = currentDesign.length
-    if (totalToLoad === 0) {
+    // Restore from designStore
+    const storedDesign = designStore[activeSide]
+    
+    if (storedDesign.length === 0) {
+      console.log(`[SYNC] Nothing to restore for ${activeSide}`)
       canvas.renderAll()
+      console.log(`========== [SYNC END - EMPTY] ==========`)
       return
     }
 
-    currentDesign.forEach((element) => {
+    console.log(`[SYNC] Restoring ${storedDesign.length} element(s) for ${activeSide}`)
+    storedDesign.forEach((el, i) => {
+      console.log(`[SYNC] Element ${i}: name="${el.name}", src="${el.src.substring(0, 50)}..."`)
+    })
+
+    let loadedCount = 0
+    const totalToLoad = storedDesign.length
+
+    storedDesign.forEach((element) => {
       const imgElement = new Image()
       imgElement.onload = () => {
         const fabricImg = new FabricImage(imgElement, {
@@ -269,52 +332,22 @@ export default function CustomizePage() {
         canvas.add(fabricImg)
         loadedCount++
         if (loadedCount === totalToLoad) {
+          console.log(`[SYNC] Restored all ${totalToLoad} for ${activeSide}`)
+          console.log(`[SYNC] Canvas now has ${canvas.getObjects().length} total objects`)
           canvas.renderAll()
+          console.log(`========== [SYNC END - RESTORED] ==========`)
         }
       }
       imgElement.onerror = () => {
         loadedCount++
         if (loadedCount === totalToLoad) {
           canvas.renderAll()
+          console.log(`========== [SYNC END - ERROR] ==========`)
         }
       }
       imgElement.src = element.src
     })
-  }, [activeSide, tshirtColor, createTshirtBg])
-
-  const saveCurrentDesign = useCallback(() => {
-    if (!fabricCanvasRef.current) return
-
-    const canvas = fabricCanvasRef.current
-    const objects = canvas
-      .getObjects()
-      .filter((obj) => {
-        const id = obj.get("id") || ""
-        return !id.startsWith("tshirt-") && id !== "clip-rect"
-      })
-
-    const currentDesign: DesignElement[] = objects
-      .map((obj) => {
-        const fabricImg = obj as FabricImage
-        return {
-          src: fabricImg.getSrc?.() || "",
-          position: {
-            x: obj.left || 0,
-            y: obj.top || 0,
-            scaleX: obj.scaleX || 1,
-            scaleY: obj.scaleY || 1,
-            rotation: obj.angle || 0,
-          },
-          name: obj.get("name") || "uploaded-image",
-        }
-      })
-      .filter((el) => el.src)
-
-    setDesigns((prev) => ({
-      ...prev,
-      [activeSide]: currentDesign,
-    }))
-  }, [activeSide])
+  }, [activeSide, tshirtColor, createTshirtBg, designStore])
 
   const handleImageUpload = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -361,7 +394,7 @@ export default function CustomizePage() {
           canvas.add(fabricImg)
           canvas.setActiveObject(fabricImg)
           canvas.renderAll()
-          saveCurrentDesign()
+          saveCurrentSide()
 
           toast.success("Image added! Drag to move, use corners to resize.")
         }
@@ -377,7 +410,7 @@ export default function CustomizePage() {
         fileInputRef.current.value = ""
       }
     },
-    [saveCurrentDesign]
+    [saveCurrentSide]
   )
 
   const handleDeleteSelected = useCallback(() => {
@@ -390,10 +423,10 @@ export default function CustomizePage() {
       canvas.remove(activeObject)
       canvas.discardActiveObject()
       canvas.renderAll()
-      saveCurrentDesign()
+      saveCurrentSide()
       toast.info("Element deleted")
     }
-  }, [saveCurrentDesign])
+  }, [saveCurrentSide])
 
   const handleClearAll = useCallback(() => {
     if (!fabricCanvasRef.current) return
@@ -435,21 +468,51 @@ export default function CustomizePage() {
   }, [activeSide])
 
   const handleAddToCart = useCallback(() => {
+    if (!fabricCanvasRef.current) {
+      toast.error("Canvas not ready. Please try again.")
+      return
+    }
+
+    // 1. Save current canvas to designStore
+    saveCurrentSide()
+
+    // Capture mockup preview
+    const mockupDataUrl = fabricCanvasRef.current.toDataURL({
+      format: "png",
+      quality: 1,
+      multiplier: 2,
+    })
+
+    // 2. Read from designStore
+    const frontOriginalSrc = designStore.front.length > 0 ? designStore.front[0].src : undefined
+    const backOriginalSrc = designStore.back.length > 0 ? designStore.back[0].src : undefined
+
     const design: DesignConfig = {
       tshirt_color: tshirtColor,
-      front_design: designs.front.length > 0 ? (designs.front as unknown as DesignConfig["front_design"]) : undefined,
-      back_design: designs.back.length > 0 ? (designs.back as unknown as DesignConfig["back_design"]) : undefined,
+      front_design: designStore.front.length > 0 ? (designStore.front as unknown as DesignConfig["front_design"]) : undefined,
+      back_design: designStore.back.length > 0 ? (designStore.back as unknown as DesignConfig["back_design"]) : undefined,
     }
+
+    console.log("[cart] Adding to cart:", {
+      frontDesigns: designStore.front.length,
+      backDesigns: designStore.back.length,
+      hasMockup: !!mockupDataUrl,
+      hasFrontOriginal: !!frontOriginalSrc,
+      hasBackOriginal: !!backOriginalSrc,
+    })
 
     addItem({
       design,
       quantity,
       size: selectedSize as (typeof TSHIRT_SIZES)[number],
       unit_price: UNIT_PRICE,
+      mockupDataUrl,
+      originalFrontImageDataUrl: frontOriginalSrc,
+      originalBackImageDataUrl: backOriginalSrc,
     })
 
     setShowCartDialog(true)
-  }, [tshirtColor, designs, quantity, selectedSize, addItem])
+  }, [tshirtColor, quantity, selectedSize, addItem, activeSide, saveCurrentSide, designStore])
 
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat("id-ID", {
@@ -509,7 +572,18 @@ export default function CustomizePage() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <Tabs value={activeSide} onValueChange={(v) => setActiveSide(v as DesignSide)}>
+            <Tabs value={activeSide} onValueChange={(v) => {
+                console.log(`========== [TAB SWITCH] ==========`)
+                console.log(`[TAB] Current activeSide: "${activeSide}"`)
+                console.log(`[TAB] Switching to: "${v}"`)
+                console.log(`[TAB] Step 1: saveCurrentSide()`)
+                // 1. Save current canvas to designStore (plain JS, instant)
+                saveCurrentSide()
+                console.log(`[TAB] Step 2: setActiveSide("${v}")`)
+                // 2. Switch side (sync effect reads from designStore)
+                setActiveSide(v as DesignSide)
+                console.log(`========== [TAB SWITCH END] ==========`)
+              }}>
               <TabsList className="mb-4">
                 <TabsTrigger value="front">Front Side</TabsTrigger>
                 <TabsTrigger value="back">Back Side</TabsTrigger>
@@ -594,7 +668,7 @@ export default function CustomizePage() {
                   value={[quantity]}
                   onValueChange={(v) => setQuantity(v[0])}
                   min={1}
-                  max={10}
+                  max={25}
                   step={1}
                   className="mt-2"
                 />

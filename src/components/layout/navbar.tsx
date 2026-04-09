@@ -38,7 +38,7 @@ export function Navbar() {
           {/* Logo */}
           <Link href="/" className="flex items-center gap-2">
             <Shirt className="size-6 text-primary" />
-            <span className="text-xl font-bold">TeeCraft</span>
+            <span className="text-xl font-bold">Azure Store</span>
           </Link>
 
           {/* Desktop Navigation */}
@@ -88,7 +88,7 @@ export function Navbar() {
               <SheetHeader>
                 <SheetTitle className="flex items-center gap-2">
                   <Shirt className="size-5 text-primary" />
-                  TeeCraft
+                  Azure Store
                 </SheetTitle>
               </SheetHeader>
               <nav className="flex flex-col gap-4 mt-6">

@@ -12,6 +12,7 @@ import { useCart } from "@/lib/store/cart"
 import { shippingAddressSchema, type ShippingAddressInput } from "@/lib/validations"
 import { toast } from "sonner"
 import { createClient } from "@/lib/supabase/client"
+import { uploadOrderImageFromDataUrl } from "@/lib/supabase/storage"
 import { Loader2, ArrowLeft, CreditCard } from "lucide-react"
 import Link from "next/link"
 
@@ -163,7 +164,7 @@ export default function CheckoutPage() {
 
       // Create order
       const orderNumber = generateOrderNumber()
-      
+
       const { data: order, error: orderError } = await supabase
         .from("orders")
         .insert({
@@ -182,20 +183,77 @@ export default function CheckoutPage() {
         throw new Error(orderError.message)
       }
 
-      // Create order items
-      const orderItems = items.map((item) => ({
-        order_id: order.id,
-        quantity: item.quantity,
-        unit_price: item.unit_price,
-        tshirt_color: item.design.tshirt_color,
-        size: item.size,
-        front_design_url: item.design.front_design
-          ? JSON.stringify(item.design.front_design)
-          : null,
-        back_design_url: item.design.back_design
-          ? JSON.stringify(item.design.back_design)
-          : null,
-      }))
+      // Create order items with image uploads
+      const orderItemsPromises = items.map(async (item) => {
+        let mockupUrl: string | null = null
+        let originalFrontUrl: string | null = null
+        let originalBackUrl: string | null = null
+
+        // Generate a temporary ID for the order item (we'll update it after insert)
+        const tempItemId = `${item.id || Date.now()}`
+
+        // Upload mockup image
+        if (item.mockupDataUrl) {
+          try {
+            mockupUrl = await uploadOrderImageFromDataUrl(
+              item.mockupDataUrl,
+              order.id,
+              tempItemId,
+              "mockup"
+            )
+          } catch (err) {
+            console.error("Failed to upload mockup:", err)
+          }
+        }
+
+        // Upload original front design image
+        if (item.originalFrontImageDataUrl) {
+          try {
+            originalFrontUrl = await uploadOrderImageFromDataUrl(
+              item.originalFrontImageDataUrl,
+              order.id,
+              tempItemId,
+              "original-front"
+            )
+          } catch (err) {
+            console.error("Failed to upload original front image:", err)
+          }
+        }
+
+        // Upload original back design image
+        if (item.originalBackImageDataUrl) {
+          try {
+            originalBackUrl = await uploadOrderImageFromDataUrl(
+              item.originalBackImageDataUrl,
+              order.id,
+              tempItemId,
+              "original-back"
+            )
+          } catch (err) {
+            console.error("Failed to upload original back image:", err)
+          }
+        }
+
+        return {
+          order_id: order.id,
+          quantity: item.quantity,
+          unit_price: item.unit_price,
+          tshirt_color: item.design.tshirt_color,
+          size: item.size,
+          front_design_url: item.design.front_design
+            ? JSON.stringify(item.design.front_design)
+            : null,
+          back_design_url: item.design.back_design
+            ? JSON.stringify(item.design.back_design)
+            : null,
+          preview_url: mockupUrl,
+          original_front_image_url: originalFrontUrl,
+          original_back_image_url: originalBackUrl,
+          mockup_url: mockupUrl,
+        }
+      })
+
+      const orderItems = await Promise.all(orderItemsPromises)
 
       const { error: itemsError } = await supabase
         .from("order_items")

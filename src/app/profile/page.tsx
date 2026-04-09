@@ -13,6 +13,7 @@ import { revalidatePath } from "next/cache"
 import { toast } from "sonner"
 import Link from "next/link"
 import { User, Package, ArrowRight, Save } from "lucide-react"
+import { LogoutButton } from "@/components/profile/logout-button"
 
 export default async function ProfilePage() {
   const session = await requireAuth()
@@ -108,6 +109,10 @@ export default async function ProfilePage() {
                   <p>Phone: {profile.phone || "Not set"}</p>
                   <p>City: {profile.city || "Not set"}</p>
                 </div>
+
+                <Separator />
+
+                <LogoutButton />
               </CardContent>
             </Card>
 

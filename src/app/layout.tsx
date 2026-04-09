@@ -9,7 +9,7 @@ import { Footer } from "@/components/layout/footer";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "TeeCraft - Custom T-Shirt Printing Marketplace",
+  title: "Azure Store - Custom T-Shirt Printing Marketplace",
   description: "Design and order custom printed t-shirts online. Upload your designs, choose colors, and get your unique tees delivered to your door.",
 };
 

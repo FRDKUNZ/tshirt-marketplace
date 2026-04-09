@@ -13,33 +13,49 @@ export default function LoginPage() {
   const [error, setError] = useState<string | null>(null)
 
   const handleLogin = async () => {
+    console.log("=== HANDLE LOGIN CALLED ===")
     setIsLoading(true)
     setError(null)
 
-    const supabase = createClient()
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"
-    const callbackUrl = `${appUrl}/auth/callback`
+    try {
+      const supabase = createClient()
+      console.log("Supabase client created")
 
-    const { data, error: signInError } = await supabase.auth.signInWithOAuth({
-      provider: "google",
-      options: {
-        redirectTo: callbackUrl,
-        queryParams: {
-          access_type: "offline",
-          prompt: "consent",
+      const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"
+      const callbackUrl = `${appUrl}/auth/callback`
+      console.log("Callback URL:", callbackUrl)
+
+      const { data, error: signInError } = await supabase.auth.signInWithOAuth({
+        provider: "google",
+        options: {
+          redirectTo: callbackUrl,
+          queryParams: {
+            access_type: "offline",
+            prompt: "consent",
+          },
         },
-      },
-    })
+      })
 
-    if (signInError) {
-      console.error("signInWithOAuth error:", signInError)
-      setError(signInError.message)
+      console.log("OAuth response:", { data: !!data, error: signInError })
+
+      if (signInError) {
+        console.error("OAuth error:", signInError)
+        setError(signInError.message)
+        setIsLoading(false)
+        return
+      }
+
+      if (data?.url) {
+        console.log("Redirecting to:", data.url)
+        window.location.href = data.url
+      } else {
+        setError("No OAuth URL received")
+        setIsLoading(false)
+      }
+    } catch (err: any) {
+      console.error("Login exception:", err)
+      setError(err?.message || "Login failed")
       setIsLoading(false)
-      return
-    }
-
-    if (data.url) {
-      window.location.href = data.url
     }
   }
 
@@ -57,7 +73,7 @@ export default function LoginPage() {
     <div className="container mx-auto px-4 py-16 flex items-center justify-center min-h-[80vh]">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center space-y-2">
-          <CardTitle className="text-2xl">Welcome to TeeCraft</CardTitle>
+          <CardTitle className="text-2xl">Welcome to Azure Store</CardTitle>
           <CardDescription>
             Sign in to start creating custom t-shirts
           </CardDescription>
@@ -86,7 +102,11 @@ export default function LoginPage() {
           )}
 
           <Button
-            onClick={handleLogin}
+            type="button"
+            onClick={() => {
+              console.log("BUTTON CLICKED - calling handleLogin")
+              handleLogin()
+            }}
             disabled={isLoading}
             className="w-full gap-2"
             size="lg"

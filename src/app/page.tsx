@@ -52,7 +52,7 @@ const testimonials = [
   {
     name: "Sarah Chen",
     role: "Small Business Owner",
-    content: "TeeCraft made it so easy to create custom merch for my team. The design tool is intuitive and the quality is outstanding!",
+    content: "Azure Store made it so easy to create custom merch for my team. The design tool is intuitive and the quality is outstanding!",
     rating: 5,
   },
   {
@@ -150,13 +150,81 @@ export default function HomePage() {
           </div>
 
           {/* Hero Preview */}
-          <div className="relative w-full max-w-2xl mt-8">
-            <div className="aspect-video rounded-xl overflow-hidden bg-gradient-to-br from-primary/20 to-primary/5 border-2 border-primary/20 flex items-center justify-center">
-              <div className="text-center space-y-4 p-8">
-                <Shirt className="size-24 text-primary/50" />
-                <p className="text-muted-foreground">
-                  Interactive t-shirt preview with drag & drop design tool
-                </p>
+          <div className="relative w-full max-w-4xl mt-8">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              {/* Main t-shirt image */}
+              <div className="col-span-2 row-span-2 relative group">
+                <div className="aspect-square rounded-2xl overflow-hidden bg-gradient-to-br from-muted/50 to-muted">
+                  <Image
+                    src="https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=800&q=80"
+                    alt="White t-shirt mockup"
+                    width={800}
+                    height={800}
+                    className="size-full object-cover group-hover:scale-105 transition-transform duration-500"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" />
+                  <div className="absolute bottom-4 left-4 text-white">
+                    <p className="text-sm font-medium">Custom Design</p>
+                    <p className="text-xs opacity-80">Front & Back</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Color variant 1 */}
+              <div className="relative group">
+                <div className="aspect-square rounded-xl overflow-hidden bg-gradient-to-br from-muted/50 to-muted">
+                  <Image
+                    src="https://images.unsplash.com/photo-1618354691373-d851c5c3a990?w=400&q=80"
+                    alt="Black t-shirt"
+                    width={400}
+                    height={400}
+                    className="size-full object-cover group-hover:scale-105 transition-transform duration-300"
+                  />
+                </div>
+              </div>
+
+              {/* Color variant 2 */}
+              <div className="relative group">
+                <div className="aspect-square rounded-xl overflow-hidden bg-gradient-to-br from-muted/50 to-muted">
+                  <Image
+                    src="https://images.unsplash.com/photo-1583743814966-8936f5b7be1a?w=400&q=80"
+                    alt="Colored t-shirt"
+                    width={400}
+                    height={400}
+                    className="size-full object-cover group-hover:scale-105 transition-transform duration-300"
+                  />
+                </div>
+              </div>
+
+              {/* Design showcase */}
+              <div className="relative group">
+                <div className="aspect-square rounded-xl overflow-hidden bg-gradient-to-br from-primary/20 to-primary/5">
+                  <Image
+                    src="https://images.unsplash.com/photo-1529374255404-311a2a4f1fd9?w=400&q=80"
+                    alt="Custom printed t-shirt"
+                    width={400}
+                    height={400}
+                    className="size-full object-cover group-hover:scale-105 transition-transform duration-300"
+                  />
+                  <div className="absolute inset-0 flex items-center justify-center bg-primary/20">
+                    <div className="size-16 rounded-full bg-primary/80 flex items-center justify-center">
+                      <Palette className="size-8 text-white" />
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Model wearing */}
+              <div className="relative group">
+                <div className="aspect-square rounded-xl overflow-hidden bg-gradient-to-br from-muted/50 to-muted">
+                  <Image
+                    src="https://images.unsplash.com/photo-1576566588028-4147f3842f27?w=400&q=80"
+                    alt="Model wearing custom t-shirt"
+                    width={400}
+                    height={400}
+                    className="size-full object-cover group-hover:scale-105 transition-transform duration-300"
+                  />
+                </div>
               </div>
             </div>
           </div>
