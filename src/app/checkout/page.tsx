@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Separator } from "@/components/ui/separator"
+import { Badge } from "@/components/ui/badge"
 import { useCart } from "@/lib/store/cart"
 import { shippingAddressSchema, type ShippingAddressInput } from "@/lib/validations"
 import { toast } from "sonner"
@@ -15,6 +16,7 @@ import { createClient } from "@/lib/supabase/client"
 import { uploadOrderImageFromDataUrl } from "@/lib/supabase/storage"
 import { Loader2, ArrowLeft, CreditCard } from "lucide-react"
 import Link from "next/link"
+import { formatRupiah, getUnitPrice } from "@/lib/pricing"
 
 declare global {
   interface Window {
@@ -26,6 +28,7 @@ export default function CheckoutPage() {
   const router = useRouter()
   const items = useCart((state) => state.items)
   const getTotal = useCart((state) => state.getTotal)
+  const getItemCount = useCart((state) => state.getItemCount)
   const clearCart = useCart((state) => state.clearCart)
 
   const [isLoading, setIsLoading] = useState(false)
@@ -79,17 +82,12 @@ export default function CheckoutPage() {
     }
   }, [isHydrated])
 
+  const totalQty = getItemCount()
   const total = getTotal()
   const shippingCost = 15000
   const grandTotal = total + shippingCost
 
-  const formatPrice = (price: number) => {
-    return new Intl.NumberFormat("id-ID", {
-      style: "currency",
-      currency: "IDR",
-      minimumFractionDigits: 0,
-    }).format(price)
-  }
+  const formatPrice = (price: number) => formatRupiah(price)
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target
@@ -494,21 +492,30 @@ export default function CheckoutPage() {
                 <CardTitle>Order Summary</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
+                {totalQty >= 5 && (
+                  <Badge variant="secondary" className="w-full justify-center py-2 text-green-700 dark:text-green-400">
+                    ✓ Harga {totalQty >= 50 ? "KOMUNITAS" : "BER-5"} aktif
+                  </Badge>
+                )}
                 {/* Items */}
                 <div className="space-y-3">
-                  {items.map((item) => (
-                    <div key={item.id} className="flex justify-between text-sm">
-                      <div>
-                        <p className="font-medium">Custom T-Shirt x{item.quantity}</p>
-                        <p className="text-muted-foreground">
-                          Size: {item.size}
+                  {items.map((item) => {
+                    const sides = item.design.front_design && item.design.back_design ? 2 : 1
+                    const { price } = getUnitPrice(totalQty, sides as 1 | 2)
+                    return (
+                      <div key={item.id} className="flex justify-between text-sm">
+                        <div>
+                          <p className="font-medium">Custom T-Shirt x{item.quantity}</p>
+                          <p className="text-muted-foreground">
+                            Size: {item.size}
+                          </p>
+                        </div>
+                        <p className="font-medium">
+                          {formatPrice(price * item.quantity)}
                         </p>
                       </div>
-                      <p className="font-medium">
-                        {formatPrice(item.unit_price * item.quantity)}
-                      </p>
-                    </div>
-                  ))}
+                    )
+                  })}
                 </div>
 
                 <Separator />

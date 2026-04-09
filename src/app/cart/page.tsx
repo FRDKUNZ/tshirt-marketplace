@@ -10,6 +10,7 @@ import { useCart } from "@/lib/store/cart"
 import { Trash2, ShoppingCart, ArrowRight, Minus, Plus } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { Empty } from "@/components/ui/empty"
+import { formatRupiah, getUnitPrice } from "@/lib/pricing"
 
 export default function CartPage() {
   const router = useRouter()
@@ -17,19 +18,16 @@ export default function CartPage() {
   const removeItem = useCart((state) => state.removeItem)
   const updateQuantity = useCart((state) => state.updateQuantity)
   const getTotal = useCart((state) => state.getTotal)
+  const getItemCount = useCart((state) => state.getItemCount)
+  const getItemUnitPrice = useCart((state) => state.getItemUnitPrice)
   const clearCart = useCart((state) => state.clearCart)
 
+  const totalQty = getItemCount()
   const total = getTotal()
   const shippingCost = total > 0 ? 15000 : 0
   const grandTotal = total + shippingCost
 
-  const formatPrice = (price: number) => {
-    return new Intl.NumberFormat("id-ID", {
-      style: "currency",
-      currency: "IDR",
-      minimumFractionDigits: 0,
-    }).format(price)
-  }
+  const formatPrice = (price: number) => formatRupiah(price)
 
   if (items.length === 0) {
     return (
@@ -141,11 +139,20 @@ export default function CartPage() {
                       </div>
 
                       <div className="text-right">
-                        <p className="text-sm text-muted-foreground">
-                          {formatPrice(item.unit_price)} each
-                        </p>
+                        <div className="flex items-center gap-2 justify-end">
+                          <Badge variant="secondary" className="text-xs">
+                            {(() => {
+                              const sides = item.design.front_design && item.design.back_design ? 2 : 1
+                              const { tier } = getUnitPrice(totalQty, sides as 1 | 2)
+                              return tier.name
+                            })()}
+                          </Badge>
+                          <span className="text-sm text-muted-foreground">
+                            {formatPrice(getItemUnitPrice(item.id))} each
+                          </span>
+                        </div>
                         <p className="text-lg font-bold">
-                          {formatPrice(item.unit_price * item.quantity)}
+                          {formatPrice(getItemUnitPrice(item.id) * item.quantity)}
                         </p>
                       </div>
                     </div>
@@ -171,6 +178,11 @@ export default function CartPage() {
             <CardTitle>Order Summary</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
+            {totalQty >= 5 && (
+              <Badge variant="secondary" className="w-full justify-center py-2 text-green-700 dark:text-green-400">
+                ✓ Harga {totalQty >= 50 ? "KOMUNITAS" : "BER-5"} aktif — hemat per kaos!
+              </Badge>
+            )}
             <div className="space-y-3">
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Subtotal</span>

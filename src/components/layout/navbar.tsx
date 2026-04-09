@@ -2,7 +2,7 @@
 
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { Shirt, ShoppingCart, User, Menu, X, Home, Palette } from "lucide-react"
+import { Shirt, ShoppingCart, User, Menu, X, Home, Palette, Tag } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import {
@@ -18,6 +18,7 @@ import { useState, useEffect } from "react"
 const navLinks = [
   { href: "/", label: "Home", icon: Home },
   { href: "/customize", label: "Customize", icon: Palette },
+  { href: "/pricing", label: "Pricing", icon: Tag },
 ]
 
 export function Navbar() {

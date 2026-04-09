@@ -5,7 +5,7 @@ import { Separator } from "@/components/ui/separator"
 const footerLinks = {
   product: [
     { label: "Customize T-Shirt", href: "/customize" },
-    { label: "Pricing", href: "/#pricing" },
+    { label: "Pricing", href: "/pricing" },
     { label: "FAQ", href: "/#faq" },
   ],
   account: [

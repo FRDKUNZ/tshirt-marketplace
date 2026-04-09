@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import type { CartItem, DesignConfig } from '@/lib/validations'
+import { getUnitPrice } from '@/lib/pricing'
 
 interface CartStore {
   items: CartItem[]
@@ -10,6 +11,11 @@ interface CartStore {
   clearCart: () => void
   getTotal: () => number
   getItemCount: () => number
+  /**
+   * Get the recalculated unit price for an item based on total cart quantity.
+   * This ensures the price updates dynamically as the user adds/removes items.
+   */
+  getItemUnitPrice: (id: string) => number
 }
 
 export const useCart = create<CartStore>()(
@@ -45,13 +51,29 @@ export const useCart = create<CartStore>()(
       },
 
       getTotal: () => {
-        const { items } = get()
-        return items.reduce((total, item) => total + item.unit_price * item.quantity, 0)
+        const { items, getItemCount } = get()
+        const totalQty = getItemCount()
+        return items.reduce((total, item) => {
+          // Recalculate unit price based on total cart quantity
+          const sides = item.design.front_design && item.design.back_design ? 2 : 1
+          const { price } = getUnitPrice(totalQty, sides as 1 | 2)
+          return total + price * item.quantity
+        }, 0)
       },
 
       getItemCount: () => {
         const { items } = get()
         return items.reduce((count, item) => count + item.quantity, 0)
+      },
+
+      getItemUnitPrice: (id) => {
+        const { items, getItemCount } = get()
+        const item = items.find((i) => i.id === id)
+        if (!item) return 0
+        const totalQty = getItemCount()
+        const sides = item.design.front_design && item.design.back_design ? 2 : 1
+        const { price } = getUnitPrice(totalQty, sides as 1 | 2)
+        return price
       },
     }),
     {

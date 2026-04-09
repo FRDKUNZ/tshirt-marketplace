@@ -71,37 +71,40 @@ const testimonials = [
 
 const pricing = [
   {
-    name: "Single Tee",
-    price: 149000,
-    description: "Perfect for personal use or gifts",
+    name: "SATUAN",
+    price: 89000,
+    description: "Untuk personal, hadiah, atau trial desain",
     features: [
-      "Full front & back customization",
-      "Premium cotton material",
-      "High-quality DTG printing",
-      "Free design template",
+      "Bebas desain custom (full color)",
+      "Kaos Combed 30s (lembut & adem)",
+      "Pilihan warna kaos: 10+ warna",
+      "Ukuran: S – XXL",
+      "Pengerjaan 2–3 hari kerja",
     ],
   },
   {
-    name: "Bundle (5+)",
-    price: 129000,
-    description: "Great for teams and small groups",
+    name: "BER-5",
+    price: 79000,
+    description: "Untuk rombongan kecil, pasangan, tim mini",
     features: [
-      "Everything in Single Tee",
-      "Bulk discount pricing",
-      "Multiple size options",
-      "Priority processing",
+      "Semua fitur Paket Satuan",
+      "Hemat Rp 10.000 per kaos",
+      "Desain bisa beda tiap kaos",
+      "Gratis 2x revisi desain",
+      "Free sticker logo custom",
     ],
     popular: true,
   },
   {
-    name: "Bulk (50+)",
-    price: 99000,
-    description: "Best value for large orders",
+    name: "KOMUNITAS",
+    price: 65000,
+    description: "Untuk event, brand clothing, organisasi",
     features: [
-      "Everything in Bundle",
-      "Maximum discount",
-      "Dedicated support",
-      "Custom packaging options",
+      "Semua fitur Paket Ber-5",
+      "Hemat Rp 24.000 per kaos",
+      "Konsultasi desain GRATIS",
+      "Free sampling sebelum produksi",
+      "Garansi kaos cacat diganti baru",
     ],
   },
 ]
@@ -292,10 +295,10 @@ export default function HomePage() {
         <div className="text-center mb-12">
           <Badge variant="secondary" className="mb-4">Pricing</Badge>
           <h2 className="text-3xl md:text-4xl font-bold mb-4">
-            Simple, Transparent Pricing
+            Harga Simple & Transparan
           </h2>
           <p className="text-muted-foreground max-w-2xl mx-auto">
-            Quality custom t-shirts at competitive prices
+            Semakin banyak order, semakin hemat per kaos
           </p>
         </div>
 
@@ -309,7 +312,7 @@ export default function HomePage() {
             >
               {plan.popular && (
                 <Badge className="absolute -top-3 left-1/2 -translate-x-1/2">
-                  Most Popular
+                  Paling Populer
                 </Badge>
               )}
               <CardContent className="pt-6 space-y-6">
@@ -317,10 +320,10 @@ export default function HomePage() {
                   <h3 className="text-xl font-semibold">{plan.name}</h3>
                   <p className="text-sm text-muted-foreground">{plan.description}</p>
                 </div>
-                
+
                 <div className="text-4xl font-bold">
                   {formatPrice(plan.price)}
-                  <span className="text-base font-normal text-muted-foreground">/tee</span>
+                  <span className="text-base font-normal text-muted-foreground">/kaos</span>
                 </div>
 
                 <ul className="space-y-3">
@@ -332,17 +335,25 @@ export default function HomePage() {
                   ))}
                 </ul>
 
-                <Link href="/customize">
+                <Link href="/customize" className="block">
                   <Button
                     className="w-full"
                     variant={plan.popular ? "default" : "outline"}
                   >
-                    Get Started
+                    Pesan Sekarang
                   </Button>
                 </Link>
               </CardContent>
             </Card>
           ))}
+        </div>
+
+        <div className="text-center mt-8">
+          <Link href="/pricing">
+            <Button variant="link" className="gap-2">
+              Lihat detail harga lengkap →
+            </Button>
+          </Link>
         </div>
       </section>
 
