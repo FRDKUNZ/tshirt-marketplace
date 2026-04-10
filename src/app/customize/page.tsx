@@ -10,6 +10,7 @@ import { Separator } from "@/components/ui/separator"
 import { toast } from "sonner"
 import { Upload, Download, Trash2, ShoppingCart, ArrowRight } from "lucide-react"
 import { useCart } from "@/lib/store/cart"
+import { getPendingCustomPrintAttachments } from "./custom-print-upload"
 import type { DesignConfig } from "@/lib/validations"
 import { useRouter } from "next/navigation"
 import {
@@ -455,6 +456,9 @@ export default function CustomizePage() {
         back_design: backDesign.length > 0 ? (backDesign as any) : undefined,
       }
 
+      // Get any pending custom print attachments
+      const attachments = getPendingCustomPrintAttachments()
+
       addItem({
         design,
         quantity,
@@ -463,9 +467,17 @@ export default function CustomizePage() {
         mockupDataUrl: combinedMockupUrl,
         originalFrontImageDataUrl: undefined,
         originalBackImageDataUrl: undefined,
+        customPrintAttachments: attachments.length > 0 ? attachments : undefined,
       })
 
       toast.dismiss(toastId)
+
+      if (attachments.length > 0) {
+        toast.success(`Kaos + ${attachments.length} gambar sablon ditambahkan ke keranjang!`)
+      } else {
+        toast.success("Kaos ditambahkan ke keranjang!")
+      }
+
       setShowCartDialog(true)
     } catch {
       toast.dismiss(toastId)

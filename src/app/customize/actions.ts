@@ -7,7 +7,7 @@ import { uploadCustomPrintImage } from "@/lib/supabase/storage"
 
 export async function uploadCustomPrint(formData: FormData) {
   const user = await requireAuth()
-  
+
   const file = formData.get("file") as File
   const description = formData.get("description") as string
 
@@ -25,9 +25,16 @@ export async function uploadCustomPrint(formData: FormData) {
 
   try {
     const supabase = await createClient() as any
-    
-    // Upload file to storage
-    const fileUrl = await uploadCustomPrintImage(file, user.id)
+
+    // Upload file to storage with detailed error logging
+    let fileUrl: string
+    try {
+      fileUrl = await uploadCustomPrintImage(file, user.id)
+    } catch (uploadError) {
+      const message = uploadError instanceof Error ? uploadError.message : String(uploadError)
+      console.error("Storage upload failed:", message)
+      return { error: `Failed to upload file: ${message}` }
+    }
 
     // Save record to database
     const { data, error } = await supabase
@@ -45,17 +52,18 @@ export async function uploadCustomPrint(formData: FormData) {
       .single()
 
     if (error) {
-      console.error("Database error:", error)
+      console.error("Database insert failed:", error)
       return { error: "Failed to save upload record" }
     }
 
     revalidatePath("/customize")
     revalidatePath("/admin")
-    
+
     return { success: true, data }
   } catch (err) {
     console.error("Upload error:", err)
-    return { error: "Failed to upload file" }
+    const message = err instanceof Error ? err.message : String(err)
+    return { error: `Failed to upload file: ${message}` }
   }
 }
 

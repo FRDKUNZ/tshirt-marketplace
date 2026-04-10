@@ -22,7 +22,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { ArrowLeft, Package, MapPin, CreditCard, ShoppingBag, User, Image as ImageIcon, Trash2 } from "lucide-react"
+import { ArrowLeft, Package, MapPin, CreditCard, ShoppingBag, User, Image as ImageIcon, Trash2, Download } from "lucide-react"
 import { DeleteOrderButton } from "../../delete-order-button"
 
 const ORDER_STATUSES = ["pending", "paid", "processing", "shipped", "delivered", "cancelled", "refunded"] as const
@@ -81,6 +81,8 @@ export default async function AdminOrderDetailPage({
     .eq("order_id", id)
     .single()
 
+  const paymentBadgeStatus = payment?.payment_status === "settlement" || payment?.payment_status === "capture" ? "success" : (payment?.payment_status || "pending")
+
   const { data: user } = await supabase
     .from("users")
     .select("*")
@@ -99,6 +101,8 @@ export default async function AdminOrderDetailPage({
     const variants: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
       pending: "secondary",
       paid: "default",
+      settlement: "default",
+      capture: "default",
       processing: "default",
       shipped: "outline",
       delivered: "default",
@@ -106,6 +110,31 @@ export default async function AdminOrderDetailPage({
       refunded: "destructive",
     }
     return variants[status] || "secondary"
+  }
+
+  // Extract custom print files from order items
+  const customPrintFiles: { url: string; desc: string; fileName: string }[] = []
+  for (const item of orderItems || []) {
+    try {
+      if (item.front_design_url) {
+        const parsed = typeof item.front_design_url === "string" ? JSON.parse(item.front_design_url) : item.front_design_url
+        if (parsed.custom_print_urls) {
+          const urls = typeof parsed.custom_print_urls === "string" ? JSON.parse(parsed.custom_print_urls) : parsed.custom_print_urls
+          const descs = parsed.custom_print_descriptions
+            ? typeof parsed.custom_print_descriptions === "string"
+              ? JSON.parse(parsed.custom_print_descriptions)
+              : parsed.custom_print_descriptions
+            : []
+          urls.forEach((url: string, i: number) => {
+            customPrintFiles.push({
+              url,
+              desc: descs?.[i] || "",
+              fileName: url.split("/").pop()?.split("?")[0] || `file-${i + 1}.png`,
+            })
+          })
+        }
+      }
+    } catch {}
   }
 
   const TSHIRT_COLORS: Record<string, string> = {
@@ -354,6 +383,46 @@ export default async function AdminOrderDetailPage({
                   ))}
                 </div>
               )}
+
+              {/* Custom Print Files from User */}
+              {customPrintFiles.length > 0 && (
+                <div className="mt-6 md:mt-8">
+                  <h3 className="text-base md:text-lg font-semibold flex items-center gap-2 mb-4">
+                    <ImageIcon className="size-5" />
+                    File Gambar Sablon
+                  </h3>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {customPrintFiles.map((file, idx) => (
+                      <div key={idx} className="space-y-3">
+                        <div className="aspect-square rounded-lg overflow-hidden border bg-white">
+                          <img
+                            src={file.url}
+                            alt={`Custom print ${idx + 1}`}
+                            className="size-full object-contain"
+                          />
+                        </div>
+                        <div className="space-y-1">
+                          <p className="text-sm font-medium truncate">{file.fileName}</p>
+                          {file.desc && (
+                            <p className="text-xs text-muted-foreground">{file.desc}</p>
+                          )}
+                        </div>
+                        <a
+                          href={file.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          download
+                        >
+                          <Button variant="outline" size="sm" className="w-full gap-2 h-10 min-h-[44px]">
+                            <Download className="size-4" />
+                            Download
+                          </Button>
+                        </a>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </CardContent>
           </Card>
 
@@ -454,8 +523,8 @@ export default async function AdminOrderDetailPage({
               <CardContent className="space-y-3">
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">Status</span>
-                  <Badge variant={getStatusBadge(payment.payment_status || "pending")}>
-                    {payment.payment_status}
+                  <Badge variant={getStatusBadge(paymentBadgeStatus)}>
+                    {paymentBadgeStatus}
                   </Badge>
                 </div>
                 <div className="flex justify-between text-sm">

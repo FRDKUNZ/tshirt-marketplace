@@ -3,18 +3,22 @@ import { persist } from 'zustand/middleware'
 import type { CartItem, DesignConfig } from '@/lib/validations'
 import { getUnitPrice } from '@/lib/pricing'
 
+export interface CustomPrintAttachment {
+  fileName: string
+  fileSize: number
+  fileType: string
+  preview: string // base64 data URL
+  description: string
+}
+
 interface CartStore {
   items: CartItem[]
-  addItem: (item: Omit<CartItem, 'id'>) => void
+  addItem: (item: Omit<CartItem, 'id'> & { customPrintAttachments?: CustomPrintAttachment[] }) => void
   removeItem: (id: string) => void
   updateQuantity: (id: string, quantity: number) => void
   clearCart: () => void
   getTotal: () => number
   getItemCount: () => number
-  /**
-   * Get the recalculated unit price for an item based on total cart quantity.
-   * This ensures the price updates dynamically as the user adds/removes items.
-   */
   getItemUnitPrice: (id: string) => number
 }
 
@@ -54,7 +58,6 @@ export const useCart = create<CartStore>()(
         const { items, getItemCount } = get()
         const totalQty = getItemCount()
         return items.reduce((total, item) => {
-          // Recalculate unit price based on total cart quantity
           const sides = item.design.front_design && item.design.back_design ? 2 : 1
           const { price } = getUnitPrice(totalQty, sides as 1 | 2)
           return total + price * item.quantity

@@ -9,12 +9,12 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Separator } from "@/components/ui/separator"
 import { Badge } from "@/components/ui/badge"
-import { useCart } from "@/lib/store/cart"
+import { useCart, type CustomPrintAttachment } from "@/lib/store/cart"
 import { shippingAddressSchema, type ShippingAddressInput } from "@/lib/validations"
 import { toast } from "sonner"
 import { createClient } from "@/lib/supabase/client"
-import { uploadOrderImageFromDataUrl } from "@/lib/supabase/storage"
-import { Loader2, ArrowLeft, CreditCard } from "lucide-react"
+import { uploadOrderImageFromDataUrl, uploadCustomPrintImage } from "@/lib/supabase/storage"
+import { Loader2, ArrowLeft, CreditCard, Image as ImageIcon } from "lucide-react"
 import Link from "next/link"
 import { formatRupiah, getUnitPrice } from "@/lib/pricing"
 import { useLocale } from "@/lib/i18n/locale"
@@ -186,12 +186,60 @@ export default function CheckoutPage() {
 
       // Create order items with image uploads
       const orderItemsPromises = items.map(async (item) => {
+        const tempItemId = `${item.id || Date.now()}`
+        const attachments = (item as any).customPrintAttachments as CustomPrintAttachment[] | undefined
+
+        if (attachments && attachments.length > 0) {
+          console.log("[Checkout] Processing", attachments.length, "custom print attachment(s)")
+        }
+
+        // Upload custom print attachments if present
+        const customPrintUrls: string[] = []
+        const attachmentDescriptions: string[] = []
+
+        if (attachments && attachments.length > 0) {
+          for (const attachment of attachments) {
+            try {
+              // Convert base64 preview to blob for upload
+              const response = await fetch(attachment.preview)
+              const blob = await response.blob()
+              const file = new File([blob], attachment.fileName, { type: attachment.fileType })
+
+              console.log("[Checkout] Uploading custom print:", attachment.fileName, "size:", attachment.fileSize)
+              const imageUrl = await uploadCustomPrintImage(file, session.user.id)
+              console.log("[Checkout] Uploaded to:", imageUrl)
+              customPrintUrls.push(imageUrl)
+              attachmentDescriptions.push(attachment.description || "")
+
+              // Also save to custom_print_uploads table for admin tracking
+              const { data: insertData, error: dbError } = await supabase.from("custom_print_uploads").insert({
+                user_id: session.user.id,
+                file_name: attachment.fileName,
+                file_url: imageUrl,
+                file_size: attachment.fileSize,
+                file_type: attachment.fileType,
+                description: attachment.description || null,
+                status: "pending",
+              }).select()
+
+              if (dbError) {
+                console.error("[Checkout] DB Error saving to custom_print_uploads:", JSON.stringify(dbError))
+                toast.warning(`Gagal menyimpan ${attachment.fileName} ke dashboard admin`)
+              } else {
+                console.log("[Checkout] Saved to custom_print_uploads:", JSON.stringify(insertData))
+              }
+            } catch (err) {
+              const message = err instanceof Error ? err.message : String(err)
+              console.error("[Checkout] Upload failed:", message)
+              toast.error(`Gagal upload ${attachment.fileName}: ${message}`)
+            }
+          }
+        }
+
+        // Handle regular design images
         let mockupUrl: string | null = null
         let originalFrontUrl: string | null = null
         let originalBackUrl: string | null = null
-
-        // Generate a temporary ID for the order item (we'll update it after insert)
-        const tempItemId = `${item.id || Date.now()}`
 
         // Upload mockup image
         if (item.mockupDataUrl) {
@@ -235,15 +283,35 @@ export default function CheckoutPage() {
           }
         }
 
+        // Build front design URL: if custom print attachments exist, store them as JSON
+        // alongside any regular front design data in the existing field
+        let frontDesignUrl: string | null = null
+        if (item.design.front_design) {
+          frontDesignUrl = JSON.stringify({
+            design: item.design.front_design,
+            custom_print_urls: customPrintUrls.length > 0 ? customPrintUrls : undefined,
+            custom_print_descriptions: attachmentDescriptions.length > 0 ? attachmentDescriptions : undefined,
+          })
+        } else if (customPrintUrls.length > 0) {
+          // No front design, but has custom prints - store as JSON in front_design_url
+          frontDesignUrl = JSON.stringify({
+            custom_print_urls: customPrintUrls,
+            custom_print_descriptions: attachmentDescriptions,
+          })
+        }
+
+        // If no front design but has custom prints, store print URLs in front_design_url as workaround
+        if (!frontDesignUrl && customPrintUrls.length > 0) {
+          frontDesignUrl = customPrintUrls.join(", ")
+        }
+
         return {
           order_id: order.id,
           quantity: item.quantity,
           unit_price: item.unit_price,
           tshirt_color: item.design.tshirt_color,
           size: item.size,
-          front_design_url: item.design.front_design
-            ? JSON.stringify(item.design.front_design)
-            : null,
+          front_design_url: frontDesignUrl,
           back_design_url: item.design.back_design
             ? JSON.stringify(item.design.back_design)
             : null,
@@ -303,18 +371,96 @@ export default function CheckoutPage() {
       // Open Midtrans Snap popup immediately (same pattern as reference repo)
       if (typeof window !== "undefined" && window.snap) {
         window.snap.pay(token, {
-          onSuccess: function (result: any) {
+          onSuccess: async function (result: any) {
             console.log("Payment success:", result)
+
+            // Update payment status in database (webhook may not fire in sandbox)
+            try {
+              const { error: updateError } = await supabase
+                .from("payments")
+                .update({
+                  payment_status: "settlement",
+                  midtrans_transaction_id: result.transaction_id,
+                  payment_type: result.payment_type,
+                  midtrans_response: result,
+                  paid_at: result.transaction_time || new Date().toISOString(),
+                  updated_at: new Date().toISOString(),
+                })
+                .eq("midtrans_order_id", midtransOrderId)
+
+              if (updateError) {
+                console.error("Failed to update payment status:", updateError)
+              }
+
+              // Update order status to paid
+              const { error: orderUpdateError } = await supabase
+                .from("orders")
+                .update({
+                  status: "paid",
+                  updated_at: new Date().toISOString(),
+                })
+                .eq("id", order.id)
+
+              if (orderUpdateError) {
+                console.error("Failed to update order status:", orderUpdateError)
+              }
+
+              console.log("Payment and order updated to paid")
+            } catch (err) {
+              console.error("Error updating payment status:", err)
+            }
+
             clearCart()
             router.push(`/payment/success?orderId=${order.id}`)
           },
-          onPending: function (result: any) {
+          onPending: async function (result: any) {
             console.log("Payment pending:", result)
+
+            // Update payment status
+            try {
+              await supabase
+                .from("payments")
+                .update({
+                  payment_status: "pending",
+                  midtrans_transaction_id: result.transaction_id,
+                  payment_type: result.payment_type,
+                  midtrans_response: result,
+                  updated_at: new Date().toISOString(),
+                })
+                .eq("midtrans_order_id", midtransOrderId)
+            } catch (err) {
+              console.error("Error updating payment status:", err)
+            }
+
             clearCart()
             router.push(`/payment/pending?orderId=${order.id}`)
           },
-          onError: function (result: any) {
+          onError: async function (result: any) {
             console.log("Payment error:", result)
+
+            // Update payment status
+            try {
+              await supabase
+                .from("payments")
+                .update({
+                  payment_status: "failure",
+                  midtrans_transaction_id: result.transaction_id,
+                  midtrans_response: result,
+                  updated_at: new Date().toISOString(),
+                })
+                .eq("midtrans_order_id", midtransOrderId)
+
+              await supabase
+                .from("orders")
+                .update({
+                  status: "cancelled",
+                  updated_at: new Date().toISOString(),
+                })
+                .eq("id", order.id)
+            } catch (err) {
+              console.error("Error updating payment status:", err)
+            }
+
             toast.error("Payment failed. Please try again.")
           },
           onClose: function () {
@@ -503,19 +649,46 @@ export default function CheckoutPage() {
                 {/* Items */}
                 <div className="space-y-3">
                   {items.map((item) => {
+                    const attachments = (item as any).customPrintAttachments as CustomPrintAttachment[] | undefined
                     const sides = item.design.front_design && item.design.back_design ? 2 : 1
                     const { price } = getUnitPrice(totalQty, sides as 1 | 2)
+
                     return (
-                      <div key={item.id} className="flex justify-between text-sm">
-                        <div>
-                          <p className="font-medium">Custom T-Shirt x{item.quantity}</p>
-                          <p className="text-muted-foreground">
-                            {t("orders.size.label", locale)}: {item.size}
+                      <div key={item.id} className="space-y-2">
+                        <div className="flex justify-between text-sm">
+                          <div>
+                            <p className="font-medium">Custom T-Shirt x{item.quantity}</p>
+                            <p className="text-muted-foreground">
+                              {t("orders.size.label", locale)}: {item.size}
+                            </p>
+                          </div>
+                          <p className="font-medium">
+                            {formatPrice(price * item.quantity)}
                           </p>
                         </div>
-                        <p className="font-medium">
-                          {formatPrice(price * item.quantity)}
-                        </p>
+
+                        {/* Custom Print Attachments */}
+                        {attachments && attachments.length > 0 && (
+                          <div className="flex flex-wrap gap-2">
+                            {attachments.map((attachment, idx) => (
+                              <div key={idx} className="flex items-center gap-2 text-xs bg-muted rounded-md px-2 py-1.5">
+                                <div className="size-8 rounded overflow-hidden flex-shrink-0 bg-white">
+                                  <img
+                                    src={attachment.preview}
+                                    alt={attachment.fileName}
+                                    className="size-full object-cover"
+                                  />
+                                </div>
+                                <div className="min-w-0">
+                                  <p className="font-medium truncate max-w-[120px]">{attachment.fileName}</p>
+                                  {attachment.description && (
+                                    <p className="text-muted-foreground truncate max-w-[120px]">{attachment.description}</p>
+                                  )}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
                       </div>
                     )
                   })}

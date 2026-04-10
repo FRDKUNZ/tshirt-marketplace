@@ -160,6 +160,24 @@ export async function uploadCustomPrintImage(
 ): Promise<string> {
   const extension = file.name.split('.').pop() || 'png'
   const timestamp = Date.now()
-  const path = `${userId}/${timestamp}.${extension}`
-  return uploadFile(file, 'custom-prints', path)
+  const randomString = Math.random().toString(36).substring(2, 8)
+  const path = `${userId}/${timestamp}_${randomString}.${extension}`
+  
+  // Use retry logic similar to uploadBlob
+  let lastError: Error | null = null
+  for (let attempt = 1; attempt <= 3; attempt++) {
+    try {
+      const result = await uploadFile(file, 'custom-prints', path)
+      return result
+    } catch (error) {
+      lastError = error instanceof Error ? error : new Error(String(error))
+      console.warn(`Upload attempt ${attempt} failed:`, lastError.message)
+      
+      if (attempt < 3) {
+        await new Promise(resolve => setTimeout(resolve, 1000 * attempt))
+      }
+    }
+  }
+  
+  throw lastError || new Error('Failed to upload custom print image after 3 attempts')
 }

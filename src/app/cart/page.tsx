@@ -6,8 +6,8 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
-import { useCart } from "@/lib/store/cart"
-import { Trash2, ShoppingCart, ArrowRight, Minus, Plus } from "lucide-react"
+import { useCart, type CustomPrintAttachment } from "@/lib/store/cart"
+import { Trash2, ShoppingCart, ArrowRight, Minus, Plus, Image as ImageIcon } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { Empty } from "@/components/ui/empty"
 import { formatRupiah, getUnitPrice } from "@/lib/pricing"
@@ -65,111 +65,127 @@ export default function CartPage() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8">
         {/* Cart Items */}
         <div className="lg:col-span-2 space-y-4">
-          {items.map((item) => (
-            <Card key={item.id}>
-              <CardContent className="p-4 md:p-6">
-                <div className="flex flex-col sm:flex-row gap-4">
-                  {/* Preview Image */}
-                  <div
-                    className="w-full sm:w-32 h-40 sm:h-32 rounded-lg border-2 flex-shrink-0 flex items-center justify-center"
-                    style={{ backgroundColor: item.design.tshirt_color }}
-                  >
-                    <ShoppingCart className="size-8 md:size-10 opacity-50" />
-                  </div>
+          {items.map((item) => {
+            const attachments = (item as any).customPrintAttachments as CustomPrintAttachment[] | undefined
 
-                  {/* Item Details */}
-                  <div className="flex-1 space-y-3 min-w-0">
-                    {/* Header with Remove Button */}
-                    <div className="flex justify-between items-start gap-2">
-                      <div className="min-w-0 flex-1">
-                        <h3 className="font-semibold text-base md:text-lg truncate">Custom T-Shirt</h3>
-                        <div className="flex flex-wrap gap-1.5 mt-1.5">
-                          <Badge variant="secondary" className="text-xs">
-                            {t("cart.size", locale)}: {item.size}
-                          </Badge>
-                          <Badge variant="secondary" className="text-xs">
-                            {item.design.tshirt_color}
-                          </Badge>
-                          {item.design.front_design && (
-                            <Badge variant="secondary" className="text-xs">
-                              {t("cart.front", locale)}
-                            </Badge>
-                          )}
-                          {item.design.back_design && (
-                            <Badge variant="secondary" className="text-xs">
-                              {t("cart.back", locale)}
-                            </Badge>
-                          )}
-                        </div>
-                      </div>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => removeItem(item.id)}
-                        className="size-11 text-muted-foreground hover:text-destructive flex-shrink-0"
-                        aria-label="Remove item"
-                      >
-                        <Trash2 className="size-5" />
-                      </Button>
+            return (
+              <Card key={item.id}>
+                <CardContent className="p-4 md:p-6">
+                  <div className="flex flex-col sm:flex-row gap-4">
+                    {/* Preview Image */}
+                    <div
+                      className="w-full sm:w-32 h-40 sm:h-32 rounded-lg border-2 flex-shrink-0 flex items-center justify-center"
+                      style={{ backgroundColor: item.design.tshirt_color }}
+                    >
+                      <ShoppingCart className="size-8 md:size-10 opacity-50" />
                     </div>
 
-                    {/* Quantity & Price */}
-                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pt-2">
-                      {/* Quantity Controls */}
-                      <div className="flex items-center gap-2">
+                    {/* Item Details */}
+                    <div className="flex-1 space-y-3 min-w-0">
+                      {/* Header with Remove Button */}
+                      <div className="flex justify-between items-start gap-2">
+                        <div className="min-w-0 flex-1">
+                          <h3 className="font-semibold text-base md:text-lg truncate">Custom T-Shirt</h3>
+                          <div className="flex flex-wrap gap-1.5 mt-1.5">
+                            <Badge variant="secondary" className="text-xs">
+                              {t("cart.size", locale)}: {item.size}
+                            </Badge>
+                            <Badge variant="secondary" className="text-xs">
+                              {item.design.tshirt_color}
+                            </Badge>
+                            {item.design.front_design && (
+                              <Badge variant="secondary" className="text-xs">
+                                {t("cart.front", locale)}
+                              </Badge>
+                            )}
+                            {item.design.back_design && (
+                              <Badge variant="secondary" className="text-xs">
+                                {t("cart.back", locale)}
+                              </Badge>
+                            )}
+                          </div>
+
+                          {/* Custom Print Attachments */}
+                          {attachments && attachments.length > 0 && (
+                            <div className="flex flex-wrap gap-1.5 mt-2">
+                              {attachments.map((attachment, idx) => (
+                                <Badge key={idx} variant="outline" className="text-xs gap-1">
+                                  <ImageIcon className="size-3" />
+                                  <span className="truncate max-w-[100px]">{attachment.fileName}</span>
+                                </Badge>
+                              ))}
+                            </div>
+                          )}
+                        </div>
                         <Button
-                          variant="outline"
+                          variant="ghost"
                           size="icon"
-                          className="size-11"
-                          onClick={() =>
-                            updateQuantity(item.id, Math.max(1, item.quantity - 1))
-                          }
-                          disabled={item.quantity <= 1}
-                          aria-label={t("common.decrease", locale) || "Decrease quantity"}
+                          onClick={() => removeItem(item.id)}
+                          className="size-11 text-muted-foreground hover:text-destructive flex-shrink-0"
+                          aria-label="Remove item"
                         >
-                          <Minus className="size-4" />
-                        </Button>
-                        <span className="w-10 text-center font-medium text-base" aria-label={t("cart.qty", locale)}>
-                          {item.quantity}
-                        </span>
-                        <Button
-                          variant="outline"
-                          size="icon"
-                          className="size-11"
-                          onClick={() =>
-                            updateQuantity(item.id, Math.min(10, item.quantity + 1))
-                          }
-                          disabled={item.quantity >= 10}
-                          aria-label={t("common.increase", locale) || "Increase quantity"}
-                        >
-                          <Plus className="size-4" />
+                          <Trash2 className="size-5" />
                         </Button>
                       </div>
 
-                      {/* Price Info */}
-                      <div className="flex items-center justify-between sm:justify-end sm:text-right gap-2 sm:gap-3">
+                      {/* Quantity & Price */}
+                      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pt-2">
+                        {/* Quantity Controls */}
                         <div className="flex items-center gap-2">
-                          <Badge variant="secondary" className="text-xs">
-                            {(() => {
-                              const sides = item.design.front_design && item.design.back_design ? 2 : 1
-                              const { tier } = getUnitPrice(totalQty, sides as 1 | 2)
-                              return tier.name
-                            })()}
-                          </Badge>
-                          <span className="text-xs md:text-sm text-muted-foreground hidden sm:inline">
-                            {formatPrice(getItemUnitPrice(item.id))}/pc
+                          <Button
+                            variant="outline"
+                            size="icon"
+                            className="size-11"
+                            onClick={() =>
+                              updateQuantity(item.id, Math.max(1, item.quantity - 1))
+                            }
+                            disabled={item.quantity <= 1}
+                            aria-label={t("common.decrease", locale) || "Decrease quantity"}
+                          >
+                            <Minus className="size-4" />
+                          </Button>
+                          <span className="w-10 text-center font-medium text-base" aria-label={t("cart.qty", locale)}>
+                            {item.quantity}
                           </span>
+                          <Button
+                            variant="outline"
+                            size="icon"
+                            className="size-11"
+                            onClick={() =>
+                              updateQuantity(item.id, Math.min(10, item.quantity + 1))
+                            }
+                            disabled={item.quantity >= 10}
+                            aria-label={t("common.increase", locale) || "Increase quantity"}
+                          >
+                            <Plus className="size-4" />
+                          </Button>
                         </div>
-                        <p className="text-base md:text-lg font-bold whitespace-nowrap">
-                          {formatPrice(getItemUnitPrice(item.id) * item.quantity)}
-                        </p>
+
+                        {/* Price Info */}
+                        <div className="flex items-center justify-between sm:justify-end sm:text-right gap-2 sm:gap-3">
+                          <div className="flex items-center gap-2">
+                            <Badge variant="secondary" className="text-xs">
+                              {(() => {
+                                const sides = item.design.front_design && item.design.back_design ? 2 : 1
+                                const { tier } = getUnitPrice(totalQty, sides as 1 | 2)
+                                return tier.name
+                              })()}
+                            </Badge>
+                            <span className="text-xs md:text-sm text-muted-foreground hidden sm:inline">
+                              {formatPrice(getItemUnitPrice(item.id))}/pc
+                            </span>
+                          </div>
+                          <p className="text-base md:text-lg font-bold whitespace-nowrap">
+                            {formatPrice(getItemUnitPrice(item.id) * item.quantity)}
+                          </p>
+                        </div>
                       </div>
                     </div>
                   </div>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
+                </CardContent>
+              </Card>
+            )
+          })}
 
           <Button
             variant="outline"
