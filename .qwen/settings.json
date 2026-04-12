@@ -12,7 +12,9 @@
       "Bash(rmdir *)",
       "Bash(type *)",
       "Bash(convertfrom-json)",
-      "Bash(select-object *)"
+      "Bash(select-object *)",
+      "Bash(git add *)",
+      "Bash(git commit *)"
     ]
   },
   "$version": 3

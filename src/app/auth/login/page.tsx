@@ -21,7 +21,9 @@ export default function LoginPage() {
       const supabase = createClient()
       console.log("Supabase client created")
 
-      const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"
+      // Use current window location origin for production URL
+      // This automatically uses the correct URL (localhost or vercel)
+      const appUrl = window.location.origin
       const callbackUrl = `${appUrl}/auth/callback`
       console.log("Callback URL:", callbackUrl)
 
